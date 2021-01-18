@@ -70,8 +70,10 @@ float SoDa::Filter::normalize(float freq, float sample_rate) {
   return res; 
 }
 
-void SoDa::Filter::makePrototype(std::vector<std::complex<float>> & PH, float sample_rate, float lo, float hi, 
+void SoDa::Filter::makePrototype(std::vector<std::complex<float>> & PH, 
+				 float sample_rate, float lo, float hi, 
 				 float transition_width) {
+  // Assume we're building a band pass filter
   float lo_stop = lo - transition_width;
   float lo_pass = lo;
   float hi_pass = hi;
@@ -80,6 +82,18 @@ void SoDa::Filter::makePrototype(std::vector<std::complex<float>> & PH, float sa
   int num_taps = PH.size();
   float bucket_width = sample_rate / ((float) num_taps);
 
+  // correct for lower band edge -- no transition band
+  if(lo < ((-0.5 * sample_rate) + bucket_width)) {
+    lo_stop = -sample_rate; // now irrelevant
+    lo_pass = -0.5 * sample_rate; 
+  }
+  // correct for upper band edge -- no transition band
+  if(hi > ((0.5 * sample_rate) - bucket_width)) {
+    hi_stop = sample_rate;
+    hi_pass = 0.5 * sample_rate; 
+  }
+    
+  
   for(int i = 0; i < num_taps; i++) {
     int f_idx = i - (num_taps / 2);
     float freq = bucket_width * ((float) f_idx); 
@@ -131,15 +145,16 @@ SoDa::Filter::Filter(FTYPE typ, int num_taps, float sample_rate, float f1, float
 
   // make the prototype
   switch(typ) {
-  case LO:
-    makePrototype(H, sample_rate, 0.0, f1, transition_width);
-    break;
-  case HI:
-    makePrototype(H, sample_rate, f1, 0.5 * sample_rate - transition_width, transition_width);    
-    break;
-  case BAND:
+  case BP:
     makePrototype(H, sample_rate, f1, f2, transition_width);        
-    break; 
+    break;
+  case BS:
+    makePrototype(H, sample_rate, f1 + transition_width, f2 - transition_width, transition_width);
+    // now invert the filter
+    for(auto & HE : H) {
+      HE = std::complex<float>(1.0, 0.0) - HE;
+    }
+    break;
   }
 
   // take the DFT
@@ -168,7 +183,7 @@ void SoDa::Filter::makeImage(int image_size) {
   }
 
   std::cerr << "Making new FFT object sized " << image_size << "\n";
-  dft_p = new SoDa::FFT(image_size); 
+  dft_p = new SoDa::FFT(image_size);
 
   std::vector<std::complex<float>> h_padded(image_size);
 

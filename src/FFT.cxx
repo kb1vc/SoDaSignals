@@ -1,4 +1,8 @@
 #include "FFT.hxx"
+#include <sstream>
+#include <iostream>
+
+
 SoDa::FFT::FFT(size_t N, unsigned int flags) {
   dim = N;
 
@@ -34,12 +38,14 @@ SoDa::FFT::~FFT() {
 
 bool SoDa::FFT::fft(std::vector<std::complex<float>> & out, std::vector<std::complex<float>> & in)
 {
+  checkInOut(out.size(), in.size());
   fftwf_execute_dft(fplan_f, (fftwf_complex *) in.data(), (fftwf_complex *) out.data());
   return true;
 }
 
 bool SoDa::FFT::ifft(std::vector<std::complex<float>> & out, std::vector<std::complex<float>> & in)
 {
+  checkInOut(out.size(), in.size());  
   fftwf_execute_dft(fplan_i, (fftwf_complex *) in.data(), (fftwf_complex *) out.data());
   return true;
 }
@@ -48,14 +54,29 @@ bool SoDa::FFT::ifft(std::vector<std::complex<float>> & out, std::vector<std::co
 
 bool SoDa::FFT::fft(std::vector<std::complex<double>> & out, std::vector<std::complex<double>> & in)
 {
+  checkInOut(out.size(), in.size());
   fftw_execute_dft(dplan_f, (fftw_complex *) in.data(), (fftw_complex *) out.data());
   return true;
 }
 
 bool SoDa::FFT::ifft(std::vector<std::complex<double>> & out, std::vector<std::complex<double>> & in)
 {
+  checkInOut(out.size(), in.size());  
   fftw_execute_dft(dplan_i, (fftw_complex *) in.data(), (fftw_complex *) out.data());
   return true;
 }
 
 
+void SoDa::FFT::checkInOut(size_t outsize, size_t insize) {
+  std::stringstream ss; 
+  if((outsize == dim) && (insize == dim)) return;
+  
+  if(outsize != dim) {
+    ss << "Output vector size " << outsize << " "; 
+  }
+  if(insize != dim) {
+    ss << "Input vector size " << insize << " ";
+  }
+  ss << "is longer than the planned size of " << dim << " elements\n";
+  throw std::runtime_error(ss.str());
+}

@@ -935,13 +935,13 @@ DOCSET_FEEDNAME        = "Doxygen generated docs"
 # reverse domain-name style string, e.g. com.mycompany.MyDocSet. Doxygen
 # will append .docset to the name.
 
-DOCSET_BUNDLE_ID       = org.doxygen.Project
+DOCSET_BUNDLE_ID       = org.kb1vc.SoDaSignals
 
 # When GENERATE_PUBLISHER_ID tag specifies a string that should uniquely identify
 # the documentation publisher. This should be a reverse domain-name style
 # string, e.g. com.mycompany.MyDocSet.documentation.
 
-DOCSET_PUBLISHER_ID    = org.doxygen.Publisher
+DOCSET_PUBLISHER_ID    = org.kb1vc
 
 # The GENERATE_PUBLISHER_NAME tag identifies the documentation publisher.
 
@@ -1426,6 +1426,7 @@ MACRO_EXPANSION        = YES
 
 EXPAND_ONLY_PREDEF     = NO
 
+
 # If the SEARCH_INCLUDES tag is set to YES (the default) the includes files
 # pointed to by INCLUDE_PATH will be searched when a #include is found.
 
@@ -1462,7 +1463,8 @@ PREDEFINED             = _DOXYGEN,protected=private
 
 EXPAND_AS_DEFINED      = EASY_TYPE \
                          EASY_DESTRUCTOR \
-                         EASY_METHOD
+                         EASY_METHOD 
+
 
 # If the SKIP_FUNCTION_MACROS tag is set to YES (the default) then
 # doxygen's preprocessor will remove all references to function-like macros

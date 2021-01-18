@@ -6,27 +6,67 @@
 namespace SoDa {
   class Filter {
   public:
-    enum FTYPE { LO, HI, BAND };
+    /**
+     * \enum FTYPE
+     * 
+     * Filter type -- band pass, or band stop. 
+     */
+    enum FTYPE { BP, /*!< band pass */
+		 BS  /*!< band stop */
+    };
     
+    /**
+     * @brief Constructor
+     * 
+     * All frequencies are in Hz, if sample_rate is in samples/second. 
+     * 
+     * 
+     * 
+     * @param typ Specify low pass, high pass, band pass, band stop filter
+     * @param num_taps The number of taps in the filter. (filter length)
+     * @param sample_rate All frequencies are normalized to -0.5 sample_rate to 0.5 sample_rate
+     * @param f1 The lower pass/stop band edge.  
+     * @param f2 The upper pass/stop band edge
+     * @param transition_width  Width of skirts (more or less)
+     * @param stopband_atten Attenuation in dB for frequencies in the stop band, beyond the 
+     * skirts. That's the magic of the Dolph-Chebyshev window. 
+     *
+     */
     Filter(FTYPE typ, int num_taps, float sample_rate, float f1, float f2, 
 	   float transition_width, float stopband_atten);
 
-    void getTaps(std::vector<float> & h);
+    /**
+     * @brief Destructor
+     * 
+     * Free up FFT object, if we have one. 
+     */
+    ~Filter() {
+      if(dft_p != nullptr) {
+	delete dft_p; 
+      }
+    }
     
-    void getTransform(std::vector<float> & H);
-
+    /** 
+     * @brief Apply the filter to a single isolated buffer
+     * 
+     * @param out The output of the filter. 
+     * @param in The input to the filter. 
+     */
     void apply(std::vector<std::complex<float>> & out, std::vector<std::complex<float>> & in);
 
+    /** 
+     * @brief Apply the filter to a buffer in a sequence of buffers. 
+     * 
+     * This method implements an overlap-and-save filter, suitable for a continous 
+     * signal stream. 
+     * 
+     * @param out The output of the filter. 
+     * @param in The input to the filter. 
+     */
     void applyCont(std::vector<std::complex<float>> & out, std::vector<std::complex<float>> & in);
 
-    template<typename T> 
-    friend void priv_apply(std::vector<T> & out, std::vector<T> & in, 
-						SoDa::Filter & f);
-    template<typename T, typename T2> 
-    friend void priv_applyCont(std::vector<T> & out, std::vector<T> & in,
-			       std::vector<T2> & saved, std::vector<T2> saved_dft,
-			       SoDa::Filter & f);
   protected:
+    ///@{
     int debug_count;
     
     int num_taps; 
@@ -45,7 +85,12 @@ namespace SoDa {
     float bucket_width;
 
     SoDa::FFT * dft_p; 
+    ///@}
     
+    /**
+     * @name Protected Member Functions -- shake well before using
+     */
+    ///@{
     void makeImage(int image_size); 
     
     void setupNewOverlap(int invec_size);
@@ -55,5 +100,6 @@ namespace SoDa {
 		       float transition_width); 
     
     float normalize(float freq, float sample_rate);
+    ///@}
   };
 }
