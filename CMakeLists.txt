@@ -1,0 +1,89 @@
+CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0) # this lets out really old distros like CentOS 6
+
+
+IF(CMAKE_VERSION VERSION_GREATER 3.0.0)
+  CMAKE_POLICY(SET CMP0048 NEW)
+  SET(CMAKE_CXX_STANDARD 11)
+ENDIF()
+
+PROJECT(SoDaSignals)
+
+SET(SoDaSignals_VERSION_MAJOR 1)
+SET(SoDaSignals_VERSION_MINOR 0)
+SET(SoDaSignals_VERSION_PATCH 0)
+SET(SoDaSignals_VERSION "${SoDaSignals_VERSION_MAJOR}.${SoDaSignals_VERSION_MINOR}.${SoDaSignals_VERSION_PATCH}")
+
+# optimizations
+IF(NOT CMAKE_BUILD_TYPE)
+  SET(CMAKE_BUILD_TYPE RELEASE)
+ENDIF()
+
+SET(CMAKE_CXX_FLAGS_DEBUG "-g")
+SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math")
+
+MESSAGE("SoDaSignals_VERSION=[${SoDaSignals_VERSION}]")
+
+FIND_PACKAGE(Git QUIET)
+
+IF((EXISTS "${CMAKE_SOURCE_DIR}/.git/") AND GIT_FOUND)
+  EXECUTE_PROCESS(
+    COMMAND git rev-parse --abbrev-ref HEAD
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_BRANCH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  EXECUTE_PROCESS(
+    COMMAND git log -1 --format=%h
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+  SET(SoDaSignals_GIT_ID "${GIT_BRANCH}:${GIT_COMMIT_HASH}")
+  FILE(WRITE ${CMAKE_BINARY_DIR}/saved_git_version.txt "${GIT_BRANCH}\n")
+  FILE(APPEND ${CMAKE_BINARY_DIR}/saved_git_version.txt "${GIT_COMMIT_HASH}\n")    
+elseIF(EXISTS ${CMAKE_BINARY_DIR}/saved_git_version.txt)
+  MESSAGE("Retrieving GIT version info from saved_git_version.txt")
+  FILE(STRINGS ${CMAKE_BINARY_DIR}/saved_git_version.txt git_version_strings)
+  LIST(GET git_version_strings 0 GIT_BRANCH)
+  LIST(GET git_version_strings 1 GIT_COMMIT_HASH)
+  SET(SoDaSignals_GIT_ID "${GIT_BRANCH}:${GIT_COMMIT_HASH}")
+else()
+  SET(SoDaSignals_GIT_ID "UNKNOWN")  
+ENDIF()
+
+SET(DOXY_PROJECT_VERSION "${SoDaSignals_VERSION}-${SoDaSignals_GIT_ID}")
+
+CONFIGURE_FILE (
+"${PROJECT_SOURCE_DIR}/version.h.in"
+"${PROJECT_BINARY_DIR}/version.h"
+  )
+INCLUDE_DIRECTORIES("${PROJECT_BINARY_DIR}")
+
+INSTALL(FILES ${PROJECT_BINARY_DIR}/version.h DESTINATION "include/SoDa")
+
+CONFIGURE_FILE (
+  "${PROJECT_SOURCE_DIR}/SoDaSignalsConfigVersion.cmake.in"
+  "${PROJECT_BINARY_DIR}/SoDaSignalsConfigVersion.cmake"
+  @ONLY
+  )  
+
+INSTALL(FILES ${PROJECT_BINARY_DIR}/SoDaSignalsConfigVersion.cmake DESTINATION "lib/cmake/SoDaSignals")
+INSTALL(FILES ${PROJECT_SOURCE_DIR}/SoDaSignalsConfig.cmake DESTINATION "lib/cmake/SoDaSignals")
+
+# This is the radio interface... 
+ADD_SUBDIRECTORY(src)
+
+FIND_PACKAGE(Doxygen QUIET)
+
+IF(DOXYGEN_FOUND)
+  MESSAGE("Found Doxygen!")	
+  CONFIGURE_FILE(${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile.in ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile @ONLY)
+  ADD_CUSTOM_TARGET(doc ALL
+    ${DOXYGEN_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/Doxyfile 
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMENT "Generating API documentation with Doxygen" VERBATIM
+    )
+
+  INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/sodaformat/doc)
+ENDIF()
+
