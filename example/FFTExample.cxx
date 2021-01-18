@@ -1,9 +1,8 @@
-#include <SoDaFormat/Format.hxx>
 #include <iostream>
 #include <math.h>
 #include <vector>
 #include <complex>
-#include "FFT.hxx"
+#include <SoDa/FFT.hxx>
 
 
 int main() {
@@ -29,12 +28,8 @@ int main() {
   
   double out_norm = out[0].real();
   double rev_norm = rev[0].real();
-  std::cout << SoDa::Format("out_norm %0  rev_norm %1\n").addF(out_norm).addF(rev_norm);
   for(int i = 0; i < N; i++) {
-    std::cout << SoDa::Format("%0 + j %1 ---> %2 + j %3 ---> %4 + j %5\n")
-      .addF(in[i].real()).addF(in[i].imag())
-      .addF(out[i].real() / out_norm).addF(out[i].imag() / out_norm)
-      .addF(rev[i].real() / rev_norm).addF(rev[i].imag() / rev_norm);
+    std::cout << in[i] << " " << out[i] / out_norm << " " << rev[i] / rev_norm << "\n";
   }
 
 

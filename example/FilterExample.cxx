@@ -1,5 +1,5 @@
-#include "Filter.hxx"
-#include <SoDaFormat/Format.hxx>
+#include <SoDa/Filter.hxx>
+#include <iostream>
 
 int main() {
   int sample_rate = 1000; 
@@ -36,9 +36,9 @@ int main() {
     float mag_LP = abs(out_LP[out_LP.size() / 2]);
     float mag_HP = abs(out_HP[out_HP.size() / 2]);
     float mag_BP = abs(out_BP[out_BP.size() / 2]);    
-    std::cout << SoDa::Format("%0 %1 %2 %3\n").addF(freq)
-      .addF(mag_LP, 'e')
-      .addF(mag_HP, 'e')
-      .addF(mag_BP, 'e');          
+    std::cout << freq << " " 
+	      << mag_LP << " "
+	      << mag_HP << " "
+	      << mag_BP << "\n";
   }
 }
