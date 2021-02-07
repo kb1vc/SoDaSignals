@@ -22,7 +22,6 @@ target_link_libraries(sodasignals ${DEP_LIBS})
 target_link_directories(sodasignals PUBLIC ${FFTW3_LIBRARY_DIRS} ${FFTW3f_LIBRARY_DIRS})
 install(TARGETS sodasignals DESTINATION lib)
 
-# Export header files 
 
-install(FILES FFT.hxx ChebyshevWindow.hxx Filter.hxx DESTINATION "include/SoDa")
+
 

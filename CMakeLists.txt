@@ -70,8 +70,12 @@ CONFIGURE_FILE (
 INSTALL(FILES ${PROJECT_BINARY_DIR}/SoDaSignalsConfigVersion.cmake DESTINATION "lib/cmake/SoDaSignals")
 INSTALL(FILES ${PROJECT_SOURCE_DIR}/SoDaSignalsConfig.cmake DESTINATION "lib/cmake/SoDaSignals")
 
-# This is the radio interface... 
+
+INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/include)
+
+
 ADD_SUBDIRECTORY(src)
+ADD_SUBDIRECTORY(include)
 
 FIND_PACKAGE(Doxygen QUIET)
 
