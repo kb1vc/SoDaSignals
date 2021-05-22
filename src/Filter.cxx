@@ -132,7 +132,7 @@ SoDa::Filter::Filter(FTYPE typ, int num_taps, float sample_rate, float f1, float
   }
 
   // We *have* our standards, you know.
-  if(stopband_atten < 50.0) stopband_atten = 50.0;
+  if(stopband_atten < 25.0) stopband_atten = 25.0;
   
   // set all the relevant sizes
   h.resize(num_taps);

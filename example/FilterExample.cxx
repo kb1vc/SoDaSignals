@@ -5,6 +5,7 @@ int main() {
   int sample_rate = 1000; 
   int num_taps = 256;
   float f_sample_rate = ((float) sample_rate);
+  // a bandpass filter from 
   SoDa::Filter filt_LP(SoDa::Filter::BP, num_taps, 
 		       f_sample_rate, 
 		       0.0, 0.15 * f_sample_rate,
@@ -19,13 +20,13 @@ int main() {
   
   SoDa::Filter filt_BP(SoDa::Filter::BP, num_taps, 
 		       f_sample_rate,
-		       -0.1 * f_sample_rate, 0.18 * f_sample_rate,
-		       0.0025 * f_sample_rate,
-		       50);
+		       -0.1 * f_sample_rate, -0.08 * f_sample_rate,
+		       0.025 * f_sample_rate,
+		       38);
   
   SoDa::Filter filt_BS(SoDa::Filter::BS, num_taps, 
 		       f_sample_rate,
-		       -0.1 * f_sample_rate, 0.18 * f_sample_rate,
+		       -0.3 * f_sample_rate, -0.25 * f_sample_rate,
 		       0.0025 * f_sample_rate,
 		       50);
   

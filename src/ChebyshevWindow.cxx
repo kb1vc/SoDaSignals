@@ -1,6 +1,7 @@
 #include "ChebyshevWindow.hxx"
 #include "FFT.hxx"
 #include <complex>
+#include <iostream>
 
 // Borrowed heavily from the scipy signal chebwin source code that was
 // apparently borrowed from the octave source code.
@@ -21,6 +22,9 @@
 // helpful. https://github.com/scipy/scipy/blob/master/scipy/signal/windows/windows.py
 // It shares a lot of its organization with the Octave code for the same function,
 // and might have some common heritage.
+//
+// The chebwin function apparently wants to specify attenuation by amplitude (/20) vs.
+// power.  That is the major change here.  
 //
 
 static float Cheb(int n, float x) {
@@ -43,7 +47,7 @@ void SoDa::ChebyshevWindow(std::vector<float> & res, size_t N, float atten) {
   float nf = (float) N;
   float anginc = M_PI / nf;
   std::vector<float> Wk(N);
-  float beta = cosh((1.0 / (nf - 1.0)) * acosh(pow(10.0, atten / 20.0)));
+  float beta = cosh((1.0 / (nf - 1.0)) * acosh(pow(10.0, atten / 10.0)));
 
   std::vector<std::complex<float>> CW(N), cw(N);
   for(int i = 0; i < N; i++) {
