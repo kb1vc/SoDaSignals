@@ -41,22 +41,23 @@ static float Cheb(int n, float x) {
   return ret; 
 }
 
-void SoDa::ChebyshevWindow(std::vector<float> & res, size_t N, float atten) {
+template <typename T>
+void _ChebyshevWindow(std::vector<T> & res, size_t N, float atten) {
   res.resize(N);
 
-  float nf = (float) N;
-  float anginc = M_PI / nf;
-  std::vector<float> Wk(N);
-  float beta = cosh((1.0 / (nf - 1.0)) * acosh(pow(10.0, atten / 10.0)));
+  T nf = (T) N;
+  T anginc = M_PI / nf;
+  std::vector<T> Wk(N);
+  T beta = cosh((1.0 / (nf - 1.0)) * acosh(pow(10.0, atten / 10.0)));
 
-  std::vector<std::complex<float>> CW(N), cw(N);
+  std::vector<std::complex<T>> CW(N), cw(N);
   for(int i = 0; i < N; i++) {
-    float ang = anginc * ((float) i);
-    float x = beta * cos(ang);
+    T ang = anginc * ((T) i);
+    T x = beta * cos(ang);
     Wk[i] = Cheb(N - 1, x);
     Wk[i] = Wk[i];
-    CW[i] = std::complex<float>(Wk[i] / Wk[0], 0.0);
-    if((N % 2) == 0) CW[i] = CW[i] * std::exp(std::complex<float>(0.0, ang));
+    CW[i] = std::complex<T>(Wk[i] / Wk[0], 0.0);
+    if((N % 2) == 0) CW[i] = CW[i] * std::exp(std::complex<T>(0.0, ang));
   }
 
   // now do the inverse fft to get us the actual window
@@ -65,4 +66,13 @@ void SoDa::ChebyshevWindow(std::vector<float> & res, size_t N, float atten) {
   for(int i = 0; i < N; i++) {
     res[i] = cw[i].real() / cw[0].real();
   }
+}
+
+
+void SoDa::ChebyshevWindow(std::vector<float> & res, size_t N, float atten) {
+  _ChebyshevWindow<float>(res, N, atten);
+}
+
+void SoDa::ChebyshevWindow(std::vector<double> & res, size_t N, float atten) {
+  _ChebyshevWindow<double>(res, N, atten);
 }

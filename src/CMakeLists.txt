@@ -1,7 +1,6 @@
 set(SIGNALS_SRCS
 	FFT.cxx
 	ChebyshevWindow.cxx
-	Filter.cxx
 	)
 
 
