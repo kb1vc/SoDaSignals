@@ -77,36 +77,43 @@ namespace SoDa {
       float freq_corner = sample_rate * 
 	(0.5 /((float) decimate) - transition_width);
 
-      // Keep the number of taps to about 128 -- use Fred Harris' rule of thumb
-      int num_taps = static_cast<int>(round(60.0 / (22.0 * transition_width)));
-      
-      // we need the filter stuff to create the LPF/BPF image
-      // and the overlap-and-save buffers. 
-      Filter<T>::initFilter(FilterType::BP, 
-			    num_taps, 
-			    sample_rate, 
-			    -freq_corner, freq_corner, 
-			    transition_width, 50);
 
       // now setup the image and overlap-and-save buffers
-      Filter<T>::setupOverlap(in_buffer_len * interpolate, decimate); 
+      Filter<T>::initFilter(SoDa::FilterType::BP, 31, 
+			    sample_rate,  0.0, freq_corner,
+			    transition_width * sample_rate, 50, 
+			    in_buffer_len, 
+			    decimate);
 
-      // create the FFT widgets
-      std::cerr << SoDa::Format("out_buffer_len %0  saved_buffer_len %1 in_buffer_len %2\n")
+      std::cerr << SoDa::Format("After setupOverlap: out_buffer_len %0  saved_buffer_len %1 in_buffer_len %2 overlap_length %3\n")
 	.addI(out_buffer_len)
 	.addI(Filter<T>::saved_dft.size())
-	.addI(in_buffer_len);
+	.addI(in_buffer_len)
+	.addI(Filter<T>::overlap_length);
       
-      int saved_buffer_size = Filter<T>::saved_dft.size();
-      dft_interp_p = std::make_shared<SoDa::FFT>(saved_buffer_size);
-      dft_dec_p = std::make_shared<SoDa::FFT>(saved_buffer_size);
+      
+      // create the FFT widgets
+      std::cerr << SoDa::Format("out_buffer_len %0  saved_buffer_len %1 in_buffer_len %2 overlap_length %3\n")
+	.addI(out_buffer_len)
+	.addI(Filter<T>::saved_dft.size())
+	.addI(in_buffer_len)
+	.addI(Filter<T>::overlap_length);
+      
+      int interpolate_buffer_size = Filter<T>::saved_dft.size();
+      dft_interp_p = std::make_shared<SoDa::FFT>(interpolate_buffer_size);
+      dft_dec_p = std::make_shared<SoDa::FFT>(interpolate_buffer_size);
 
-      out_dft.resize(saved_buffer_size);
-      out_tmp.resize(saved_buffer_size);
+      out_dft.resize(interpolate_buffer_size);
+      out_tmp.resize(interpolate_buffer_size);
+      int_buffer.resize(interpolate_buffer_size);
+      int_dft.resize(interpolate_buffer_size);
+
+      int save_buffer_size = (Filter<T>::overlap_length / interpolate);
+      save_buffer.resize(save_buffer_size);
       
       // zero out the saved vector
-      for(int i = 0; i < Filter<T>::saved.size(); i++) {
-	Filter<T>::saved[i] = std::complex<T>(0.0, 0.0);
+      for(int i = 0; i < interpolate_buffer_size; i++) {
+	int_buffer[i] = std::complex<T>(0.0, 0.0);
       }
       
       debug_count = 0; 
@@ -121,7 +128,7 @@ namespace SoDa {
     }
     
     /** 
-     * @brief Apply the Resampler to a single isolated buffer : we don't do that..
+     * @brief Apply the Resampler to a single isolated buffer : we don't do that.
      * 
      * @param out The output of the filter. 
      * @param in The input to the filter. 
@@ -158,7 +165,9 @@ namespace SoDa {
     {
       int i, j;
 
-      if(out.size() != out_buffer_len) {
+      std::cerr << "In applyCont\n";
+      
+      if(in.size() != in_buffer_len) {
 	throw SoDa::ReSampler_MismatchBufferSize("In", in_buffer_len, in.size());
       }
       if(out.size() != out_buffer_len) {
@@ -167,49 +176,42 @@ namespace SoDa {
 
       
       // put the new samples at the end of the saved buffer.
-      // stuffing them as we go along. 
-      for(i = 0; i < in.size(); i++) {
-	Filter<T>::saved[Filter<T>::save_length + i * interpolate] = in[i];
+      // stuffing them as we go along.
+
+      std::cerr << "stuffing save_buffer in.size() = " << in.size() << " save_buffer.size() = " << save_buffer.size() << "\n";
+      for(i = 0, j = 0; i < save_buffer.size(); i++, j += interpolate) {
+	int_buffer[j] = save_buffer[i]; 
+      }
+      for(i = 0; i < in.size(); i++, j += interpolate) {
+	int_buffer[j] = in[i];
       }
 
-      std::cerr << "saved_dft.size() = " << Filter<T>::saved_dft.size() << "\n";
-      
       // take the FFT of the saved buffer
       std::cerr << "interpolating\n";
-      dft_interp_p->fft(Filter<T>::saved_dft, Filter<T>::saved);
-
-      findMax(Filter<T>::saved_dft, "saved_dft");
-      
-      for(int i = Filter<T>::save_length; i < Filter<T>::saved.size(); i++) {
-	std::cout << "ZZ " << debug_count++ << " " << Filter<T>::saved[i].real() << "\n";
-      }
+      dft_interp_p->fft(int_dft, int_buffer);
 
       // multiply by the image
       // but skip the parts we don't care about
-      int lim_low = out_buffer_len / 2;
-      int lim_high =  Filter<T>::saved_dft.size() - (out_buffer_len / 2); // is this right?
-      int si = 0;
 
-      for(i = 0; i < Filter<T>::saved_dft.size(); i++) {
-	out_dft[i] = Filter<T>::H[i] * Filter<T>::saved_dft[i];	
+      for(i = 0; i < int_dft.size(); i++) {
+	out_dft[i] = Filter<T>::H[i] * int_dft[i];	
       }
 
-      findMax(out_dft, "out_dft");
-      
       // take the inverse fft
       std::cerr << "decimating\n";
       dft_dec_p->ifft(out_tmp, out_dft);
       // now stride through and downsample ?
+      // but start after the "lead-in" for the output
+      int lead_in = save_buffer.size() * interpolate;
       for(i = 0; i < out.size(); i++) {
-	out[i] = out_tmp[Filter<T>::save_length + i * decimate];
+	out[i] = out_tmp[lead_in + i * decimate];
       }
 
-      std::cerr << "Saving  save length = " << Filter<T>::save_length << "\n";
+      std::cerr << "Saving  save length = " << save_buffer.size() << "\n";
       // save the last section of the input
       // stuffing it as we go along
-      for(i = 0, j = (in.size()- (Filter<T>::save_length / interpolate)); 
-	  (i * interpolate) < Filter<T>::save_length; i++, j++) {
-	Filter<T>::saved[i * interpolate] = in[j]; 
+      for(i = 0; i < save_buffer.size(); i++) {
+	save_buffer[i] = in[j]; 
       }
     }
       
@@ -218,7 +220,7 @@ namespace SoDa {
     ///@{
     int debug_count;
     
-    std::vector<std::complex<T>> temp;
+    std::vector<std::complex<T>> int_buffer, int_dft, save_buffer;
     
     int out_buffer_len, in_buffer_len; 
 

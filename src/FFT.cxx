@@ -77,6 +77,6 @@ void SoDa::FFT::checkInOut(size_t outsize, size_t insize) {
   if(insize != dim) {
     ss << "Input vector size " << insize << " ";
   }
-  ss << "is longer than the planned size of " << dim << " elements\n";
+  ss << "is not equal to the planned size of " << dim << " elements\n";
   throw std::runtime_error(ss.str());
 }

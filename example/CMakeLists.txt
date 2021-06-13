@@ -57,3 +57,10 @@ target_include_directories(ReSamplerTest PUBLIC ${INCLUDE_DIRS})
 
 
 
+add_executable(FilterTest FilterTest.cxx)
+target_link_directories(FilterTest PUBLIC ${LIB_DIRS})
+target_link_libraries(FilterTest ${LIBS})
+target_include_directories(FilterTest PUBLIC ${INCLUDE_DIRS})
+
+
+

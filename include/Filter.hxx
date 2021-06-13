@@ -5,6 +5,7 @@
 #include "ChebyshevWindow.hxx"
 #include <iostream>
 #include <memory>
+#include <list>
 
 namespace SoDa {
   /**
@@ -35,21 +36,56 @@ namespace SoDa {
      * @param transition_width  Width of skirts (more or less)
      * @param stopband_atten Attenuation in dB for frequencies in the stop band, beyond the 
      * skirts. That's the magic of the Dolph-Chebyshev window. 
-     *
+     * @param input_buffer_length If specified, the filter will be setup here. Otherwise, 
+     * we'll wait until the first call to apply.
+     * @param required_multiple the size of the input+overlap buffer must be a multiple of this
      */
-    Filter(FilterType typ, int _num_taps, float sample_rate, float f1, float f2, 
-	   float transition_width, float stopband_atten)  {
-      initFilter(typ, _num_taps, sample_rate, f1, f2, transition_width, stopband_atten); 
+    
+    Filter(FilterType typ, int _num_taps, T sample_rate, T f1, T f2, 
+	   T transition_width, T stopband_atten, 
+	   int input_buffer_length = 0, 
+	   int required_multiple = 1) :
+      filter_type(typ), min_num_taps(_num_taps), sample_rate(sample_rate), 
+      f1(f1), f2(f2), transition_width(transition_width), stopband_atten(stopband_atten), 
+      last_invec_size(input_buffer_length),
+      required_multiple(required_multiple)
+    {
+      dft_p = nullptr;
+      
+      if(input_buffer_length) {
+	setupOverlap(last_invec_size, required_multiple);
+      }
     }
     
   protected:
     Filter() {
       // do nothing constructor -- used for ReSampler, f'rinstance. 
     }
-    void initFilter(FilterType typ, int _num_taps, float sample_rate, float f1, float f2, 
-		    float transition_width, float stopband_atten) {
 
-      num_taps = _num_taps; 
+    void initFilter(FilterType typ, int _num_taps, T _sample_rate, T _f1, T _f2, 
+		    T _transition_width, T _stopband_atten, 
+		    int _input_buffer_length = 0, 
+		    int _required_multiple = 1) {
+
+      filter_type = typ; 
+      min_num_taps = _num_taps; 
+      sample_rate = _sample_rate; 
+      f1 = _f1; 
+      f2 = _f2; 
+      transition_width = _transition_width; 
+      stopband_atten = _stopband_atten; 
+      last_invec_size = _input_buffer_length;
+      required_multiple = _required_multiple;
+	
+      dft_p = nullptr;
+      
+      if(last_invec_size) {
+	setupOverlap(last_invec_size, required_multiple);
+      }
+      
+    }
+
+    void createFilterTaps(int num_taps) {
 
       // We *have* our standards, you know.
       if(stopband_atten < 25.0) stopband_atten = 25.0;
@@ -58,13 +94,12 @@ namespace SoDa {
       h.resize(num_taps);
 
       H.resize(num_taps);
-      // we haven't done an overlap and save op yet. 
-      last_invec_size = 0;
+
       // we don't need an fft widget for the input stuff yet.
       dft_p = nullptr; 
 
       // make the prototype
-      switch(typ) {
+      switch(filter_type) {
       case BP:
 	makePrototype(H, sample_rate, f1, f2, transition_width);        
 	break;
@@ -108,13 +143,14 @@ namespace SoDa {
      * @param in The input to the filter. 
      */
     void apply(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in) {
-      if(H.size() != in.size()) makeImage(in.size());
+      if(H.size() != in.size()) setupOverlap(in.size(), required_multiple);
   
       // take the FFT of the input
       dft_p->fft(out, in);
+      
       // now multiply by the filter image
       // and the gain correction
-      float gain_corr = 1.0 / ((T) in.size());
+      T gain_corr = 1.0 / ((T) in.size());
       for(int i = 0; i < in.size(); i++) {
 	temp[i] = out[i] * H[i] * gain_corr; 
       }
@@ -135,19 +171,18 @@ namespace SoDa {
     void applyCont(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in)
     {
       int i, j;
-      debug_count++;
-  
       if(last_invec_size != in.size()) {
 	setupOverlap(in.size(), 1); 
       }
 
       // put the new samples at the end of the saved buffer.
       for(i = 0; i < in.size(); i++) {
-	saved[i + save_length] = in[i];
+	overlap_save_buffer[i + overlap_length] = in[i];
       }
-  
+
+
       // take the FFT of the saved buffer
-      dft_p->fft(saved_dft, saved);
+      dft_p->fft(saved_dft, overlap_save_buffer);
 
       // multiply by the image
       for(i = 0; i < saved_dft.size(); i++) {
@@ -157,26 +192,43 @@ namespace SoDa {
       // take the inverse fft
       dft_p->ifft(temp, saved_dft); 
 
-      // copy the result to the output
+      // copy the result to the output, discarding the first (overlap) results. 
       T scale = 1.0 / ((T) temp.size());
       for(i = 0; i < out.size(); i++) {
-	out[i] = temp[i] * scale; 
+	out[i] = temp[i + overlap_length] * scale; 
       }
 
       // save the last section of the input
-      for(i = 0, j = (in.size() - save_length); i < save_length; i++, j++) {
-	saved[i] = in[j]; 
+      for(i = 0, j = (in.size() - overlap_length); i < overlap_length; i++, j++) {
+	overlap_save_buffer[i] = in[j]; 
       }
     }
 
   protected:
+    // set up the overlap buffer, make the filter image. 
+    int findGoodSize(std::list<int> factors, int best_so_far, int test_size, int min, int max)
+    {
+      if(factors.empty()) return best_so_far; 
+      int m = factors.front();
+      std::list<int> rfactors = factors;
+      rfactors.pop_front();
+      
+      for(int f = test_size; f < max; f *= m) {
+	if((f >= min) && (f < best_so_far)) {
+	  best_so_far = f;
+	}
+	best_so_far = findGoodSize(rfactors, best_so_far, f, min, max);
+      }
+      return best_so_far; 
+    }
+    
     void setupOverlap(int invec_size, int required_multiple)
     {
       debug_count = 0; 
   
       // how big should the transform be?
       // Make it a power of two or a power of two times 3 or 5.
-      int target_min = invec_size + num_taps;
+      int target_min = invec_size + min_num_taps - 1;
       int target_max = target_min * 3 / 2; 
 
       std::cout << "target_min = " << target_min << "\ntarget_max = " << target_max << "\n";
@@ -187,90 +239,88 @@ namespace SoDa {
       // this is bone-brained stupid, but has the advantage that
       // I can explain it easily -- anything that's larger than
       // 16M entries isn't for us anyway.
-      int good_size = 0;
-      for(int i = 1; i < target_max; i = i * 2) {
-	for(int j = 1; j < 8; j += 2) {
-	  if((i * j * required_multiple) > target_min) {
-	    int cand = i * j * required_multiple;
-	    std::cout << "trying " << cand << "\n";
-	    if(((cand < good_size) 
-		|| (good_size == 0))
-	       && (cand < target_max)) good_size = cand; 
-	  }
-	}
-      }
+      std::list<int> factors;
+      factors.push_back(2); factors.push_back(3); factors.push_back(5); factors.push_back(7);
+      
+      int bignum = 1 << 24;
+      int good_size = findGoodSize(factors, bignum, required_multiple, target_min, target_max);
 
-      if(good_size == 0) {
+      if(good_size == bignum) {
 	std::stringstream ss;
 	ss << "SoDa::Filter:\n\tCould not find a good overlap-save length for a " 
-	   <<  num_taps << " tap filter and " 
+	   <<  min_num_taps << " tap filter and " 
 	   << invec_size << "%1 entry vector\n";
 	throw std::runtime_error(ss.str());
       }
   
       std::cout << "Got size = " << good_size << "\n";
-      
+
+
+
       if((good_size - invec_size) > (invec_size / 3)) {
 	std::stringstream ss;
 	ss << "SoDa::Filter:\n\tGot a really bad overlap-save  length of " 
 	   << good_size 
-	   << " for a " << num_taps  << " tap filter and " 
+	   << " for a " << min_num_taps  << " tap filter and " 
 	   << invec_size << " entry vector\n";
 	throw std::runtime_error(ss.str());
       }
 
-  
-
-      // clear the saved buffer
-      for(int i = 0; i < saved.size(); i++) {
-	saved[i] = std::complex<T>(0.0, 0.0);
-      }
-  
       saved_dft.resize(good_size);
-  
-      save_length = good_size - invec_size; 
-  
+
+      overlap_length = good_size - invec_size;
+      overlap_save_buffer.resize(good_size);
+
+      
+      // clear the saved buffer
+      for(int i = 0; i < overlap_save_buffer.size(); i++) {
+	overlap_save_buffer[i] = std::complex<T>(0.0, 0.0);
+      }
+
       last_invec_size = invec_size;
 
-      saved.resize(good_size);
-  
-      makeImage(good_size);
+      int actual_num_taps = 1 + good_size - invec_size;
+
+      createFilterTaps(actual_num_taps);
+      makeImage(good_size, actual_num_taps);
     }
-    
 
   protected:
+	
     ///@{
     int debug_count;
-    
-    int num_taps; 
+
+    T f1, f2, transition_width, stopband_atten, sample_rate;
+    int min_num_taps; 
 
     std::vector<std::complex<T>> h;
     std::vector<std::complex<T>> H;
     
-    std::vector<std::complex<T>> saved;
+    std::vector<std::complex<T>> overlap_save_buffer;
 
     std::vector<std::complex<T>> saved_dft;
     
     std::vector<std::complex<T>> temp;
     
     int last_invec_size;
+    int required_multiple;
 
     std::shared_ptr<SoDa::FFT> dft_p;
     
-    int save_length;
+    int overlap_length;
+
+    FilterType filter_type;
     ///@}
     
     /**
      * @name Protected Member Functions -- shake well before using
      */
     ///@{
-    void makeImage(int image_size)  {
+    void makeImage(int image_size, int num_taps)  {
       H.clear();
 
       H.resize(image_size);
 
-      std::cerr << "making image of size " << image_size << "\n";
-      
       // create a new FFT object.
       dft_p = std::make_shared<SoDa::FFT>(image_size);
 
@@ -292,19 +342,19 @@ namespace SoDa {
       temp.resize(image_size);
   
       // now transform it
-      dft_p->fft(H, h_padded); 
+      dft_p->fft(H, h_padded);
     }
     
-    void makePrototype(std::vector<std::complex<T>> & PH, float sample_rate, float f1, float f2, 
-		       float transition_width) {
+    void makePrototype(std::vector<std::complex<T>> & PH, T sample_rate, T f1, T f2, 
+		       T transition_width) {
       // Assume we're building a band pass filter
-      float lo_stop = f1 - transition_width;
-      float lo_pass = f1;
-      float hi_pass = f2;
-      float hi_stop = f2 + transition_width;
+      T lo_stop = f1 - transition_width;
+      T lo_pass = f1;
+      T hi_pass = f2;
+      T hi_stop = f2 + transition_width;
 
       int num_taps = PH.size();
-      float bucket_width = sample_rate / ((float) num_taps);
+      T bucket_width = sample_rate / ((T) num_taps);
 
       // correct for lower band edge -- no transition band
       if(f1 < ((-0.5 * sample_rate) + bucket_width)) {
@@ -319,8 +369,8 @@ namespace SoDa {
   
       for(int i = 0; i < num_taps; i++) {
 	int f_idx = i - (num_taps / 2);
-	float freq = bucket_width * ((float) f_idx); 
-	float v; 
+	T freq = bucket_width * ((T) f_idx); 
+	T v; 
 	if((freq <= lo_stop) || (freq >= hi_stop)) {
 	  PH[i] = 0.0;
 	}
@@ -344,8 +394,8 @@ namespace SoDa {
     }
 
     
-    float normalize(float freq, float sample_rate) {
-      float res = freq / sample_rate;
+    T normalize(T freq, T sample_rate) {
+      T res = freq / sample_rate;
 
       res = M_PI * res;
 
