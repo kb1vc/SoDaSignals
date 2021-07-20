@@ -6,6 +6,7 @@
 #include <iostream>
 #include <memory>
 #include <list>
+#include <SoDa/Format.hxx>
 
 namespace SoDa {
   /**
@@ -175,12 +176,12 @@ namespace SoDa {
 	setupOverlap(in.size(), 1); 
       }
 
+	      
       // put the new samples at the end of the saved buffer.
       for(i = 0; i < in.size(); i++) {
 	overlap_save_buffer[i + overlap_length] = in[i];
       }
-
-
+      
       // take the FFT of the saved buffer
       dft_p->fft(saved_dft, overlap_save_buffer);
 
@@ -195,7 +196,7 @@ namespace SoDa {
       // copy the result to the output, discarding the first (overlap) results. 
       T scale = 1.0 / ((T) temp.size());
       for(i = 0; i < out.size(); i++) {
-	out[i] = temp[i + overlap_length] * scale; 
+	out[i] = temp[i + overlap_length - 1] * scale; 
       }
 
       // save the last section of the input
@@ -231,10 +232,6 @@ namespace SoDa {
       int target_min = invec_size + min_num_taps - 1;
       int target_max = target_min * 3 / 2; 
 
-      std::cout << "target_min = " << target_min << "\ntarget_max = " << target_max << "\n";
-      std::cout << "invec_size = " << invec_size << "\n";
-      std::cout << "required multiple = " << required_multiple << "\n";
-
       // find a "good" size.
       // this is bone-brained stupid, but has the advantage that
       // I can explain it easily -- anything that's larger than
@@ -253,9 +250,6 @@ namespace SoDa {
 	throw std::runtime_error(ss.str());
       }
   
-      std::cout << "Got size = " << good_size << "\n";
-
-
 
       if((good_size - invec_size) > (invec_size / 3)) {
 	std::stringstream ss;
@@ -279,7 +273,7 @@ namespace SoDa {
 
       last_invec_size = invec_size;
 
-      int actual_num_taps = 1 + good_size - invec_size;
+      int actual_num_taps = good_size - 1 - invec_size;
 
       createFilterTaps(actual_num_taps);
       makeImage(good_size, actual_num_taps);
@@ -332,13 +326,9 @@ namespace SoDa {
 	h_padded[i] = std::complex<T>(0.0, 0.0);
       }
 
-      for(i = 0; i < (num_taps + 1) / 2; i++, j++) {
-	h_padded[i] = h[i]; 
+      for(i = 0; i < num_taps; i++) {
+	h_padded[i] = h[i];
       }
-      for(i = 0; i < (num_taps / 2); i++) {
-	h_padded[h_padded.size() - 1 - i] = h[h.size() - 1 - i];
-      }
-
       temp.resize(image_size);
   
       // now transform it

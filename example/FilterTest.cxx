@@ -42,14 +42,17 @@ int main() {
 
       // apply the filter
       filt_LP.applyCont(out, in);
-      
+
+      int lim = out.size() - 1;
       for(int i = 0; i < out.size(); i++, ko++) {
-	outf << SoDa::Format("%0 %1 %2 %3 %4\n")
+	float iv = (i == lim) ? (tr + 1.0) : 0;
+	outf << SoDa::Format("%0 %1 %2 %3 %4 %5\n")
 	  .addI(ko)
 	  .addF(in[i].real())
 	  .addF(in[i].imag())
 	  .addF(out[i].real())
-	  .addF(out[i].imag());
+	  .addF(out[i].imag())
+	  .addF(iv);
       }
     }
 

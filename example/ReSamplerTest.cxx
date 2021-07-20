@@ -39,12 +39,14 @@ int main() {
     for(int tr = 0; tr < 5; tr++) {
       for(int i = 0; i < in.size(); i++) {
 	in[i] = std::complex<float>(cos(ang), sin(-ang));
+	std::cout << ang << " " << in[i].real() << " " << in[i].imag() << "\n";
 	ang = ang + ang_inc;
 	ang = (ang > M_PI) ? (ang - 2.0 * M_PI) : ang; 
       }
 
       std::cerr << "Resampling\n";
 
+      std::cerr << " The input vector is getting fiddled with in some odd way. \n";
       resamp.apply(out, in);
 
       std::cerr << "Doing in/out xforms\n";

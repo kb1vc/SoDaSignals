@@ -53,9 +53,28 @@ namespace SoDa {
      * if the up/down ratio can't be implemented in the specified buffer
      * lengths. 
      *
-     * The key here is to pick an overlap-and-save size that ends up a multiple of the 
-     * output buffer length.  Otherwise resampling artifacts can kick in and cause 
-     * discontinuities from one buffer to the next. 
+     * ## The Algorithm
+     *
+     * This is a fairly straightforward filter-based implementation of a 
+     * rational resampler. It takes place in two stages: Upsampling, 
+     * followed by Dowsampling. Most of the heavy lifting is in the frequency
+     * domain. 
+     * 
+     * -# x'[nI] = x[n] -- other X'[m] = 0
+     * -# X'[s] = FFT(x'[n])
+     * -# Y'[s] = X'[s] * H[s]  apply LPF
+     * -# y'[n] = IFFT(Y'[s])
+     * -# y[n] = y[L + n]
+     *
+     * ## The implementation
+     * 
+     * We'll use an overlap-and-save method, building on the components of the
+     * SoDa::Filter class. The LPF filter H[] will be created in the Filter. Its
+     * bandwidth will be set by the Interpolate and Decimate factors so that the
+     * aliasing in both steps is addressed.  The cutoff frequency needs to be
+     * low enough to provide the interpolation smoothing for the upsampling and
+     * the alias elimination for the downsampling. 
+     * $F_{lpf} = F_{s} I} / (2 D)$ symetric about 0. (really a BPF)
      */
     ReSampler(int in_buffer_len, 
 	      int interpolate,
@@ -165,6 +184,17 @@ namespace SoDa {
     {
       int i, j;
 
+      // build overlap-and-save from input
+      // may need to break Filter<T> apply into pieces -- overlap_in, apply, overlap_out
+      // apply filter and stuff upsample vector
+      // filter overlap_out      
+      // inverse upsample,
+      // stuff downsample vector into downsample overlap
+      // transform downsample overlap
+      // strip downsample
+      // stuff downsample overlap_out
+
+      // 
       std::cerr << "In applyCont\n";
       
       if(in.size() != in_buffer_len) {
