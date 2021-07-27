@@ -1,12 +1,13 @@
 #pragma once
 #include <complex>
 #include <vector>
-#include "FFT.hxx"
 #include "Filter.hxx"
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <SoDa/Format.hxx>
+#include <iostream>
+#include <fstream>
 
 namespace SoDa {
   
@@ -35,7 +36,7 @@ namespace SoDa {
   };
   
   template <typename T>
-  class ReSampler :  Filter<T> {
+  class ReSampler {
   public:
     
     /**
@@ -58,13 +59,11 @@ namespace SoDa {
      * This is a fairly straightforward filter-based implementation of a 
      * rational resampler. It takes place in two stages: Upsampling, 
      * followed by Dowsampling. Most of the heavy lifting is in the frequency
-     * domain. 
+     * domain.  Interpolate by I, decimate by D
      * 
      * -# x'[nI] = x[n] -- other X'[m] = 0
-     * -# X'[s] = FFT(x'[n])
-     * -# Y'[s] = X'[s] * H[s]  apply LPF
-     * -# y'[n] = IFFT(Y'[s])
-     * -# y[n] = y[L + n]
+     * -# y' = filter(x')
+     * -# y[n] = y[n D]
      *
      * ## The implementation
      * 
@@ -80,8 +79,9 @@ namespace SoDa {
 	      int interpolate,
 	      int decimate,
 	      float transition_width) : 
-      Filter<T>(), in_buffer_len(in_buffer_len), interpolate(interpolate), decimate(decimate)
+      in_buffer_len(in_buffer_len), interpolate(interpolate), decimate(decimate)
     {
+      transition_width = 0.1;
       out_buffer_len = (in_buffer_len * interpolate) / decimate;
 
       if(((out_buffer_len * decimate) / interpolate) != in_buffer_len) {
@@ -90,47 +90,28 @@ namespace SoDa {
 	throw SoDa::ReSampler_BadBufferSize(in_buffer_len, interpolate, decimate); 
       }
 
-      // we need a filter.  Nothing fancy.  An LPF at 0.5 * I/D - TW
+      // we need a filter.  Nothing fancy.  An LPF at 0.5 / I - TW
       // sample rate is arbitrary, make it 1M
-      float sample_rate = 1e6; 
-      float freq_corner = sample_rate * 
-	(0.5 /((float) decimate) - transition_width);
-
+      float sample_rate = 1;
+      float freq_corner = 0.4 / ((float) interpolate); // (0.4 /((float) interpolate) - transition_width);
+      
 
       // now setup the image and overlap-and-save buffers
-      Filter<T>::initFilter(SoDa::FilterType::BP, 31, 
-			    sample_rate,  0.0, freq_corner,
-			    transition_width * sample_rate, 50, 
-			    in_buffer_len, 
-			    decimate);
+      lpf.initFilter(SoDa::FilterType::BP, 41, 
+		     sample_rate, -freq_corner, freq_corner,
+		     0.1 / interpolate, // transition_width * sample_rate,
+		     50, 
+		     in_buffer_len, 
+		     decimate);
+      
+      
+      
+      int interpolate_buffer_size = in_buffer_len * interpolate;
 
-      std::cerr << SoDa::Format("After setupOverlap: out_buffer_len %0  saved_buffer_len %1 in_buffer_len %2 overlap_length %3\n")
-	.addI(out_buffer_len)
-	.addI(Filter<T>::saved_dft.size())
-	.addI(in_buffer_len)
-	.addI(Filter<T>::overlap_length);
-      
-      
-      // create the FFT widgets
-      std::cerr << SoDa::Format("out_buffer_len %0  saved_buffer_len %1 in_buffer_len %2 overlap_length %3\n")
-	.addI(out_buffer_len)
-	.addI(Filter<T>::saved_dft.size())
-	.addI(in_buffer_len)
-	.addI(Filter<T>::overlap_length);
-      
-      int interpolate_buffer_size = Filter<T>::saved_dft.size();
-      dft_interp_p = std::make_shared<SoDa::FFT>(interpolate_buffer_size);
-      dft_dec_p = std::make_shared<SoDa::FFT>(interpolate_buffer_size);
-
-      out_dft.resize(interpolate_buffer_size);
       out_tmp.resize(interpolate_buffer_size);
       int_buffer.resize(interpolate_buffer_size);
-      int_dft.resize(interpolate_buffer_size);
 
-      int save_buffer_size = (Filter<T>::overlap_length / interpolate);
-      save_buffer.resize(save_buffer_size);
-      
-      // zero out the saved vector
+      // zero out the interpolated vector
       for(int i = 0; i < interpolate_buffer_size; i++) {
 	int_buffer[i] = std::complex<T>(0.0, 0.0);
       }
@@ -141,7 +122,6 @@ namespace SoDa {
     /**
      * @brief Destructor
      * 
-     * Free up FFT object, if we have one. 
      */
     ~ReSampler() {
     }
@@ -153,6 +133,11 @@ namespace SoDa {
      * @param in The input to the filter. 
      */
     void apply(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in) {
+      std::ofstream tmp("rsinc_in.dat");
+      for(int i = 0; i < in.size(); i++) {
+	tmp << in[i].real() << " " << in[i].imag() << "\n";
+      }
+      tmp.close();
       applyCont(out, in);
     }
 
@@ -182,19 +167,7 @@ namespace SoDa {
      */
     void applyCont(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in)
     {
-      int i, j;
-
-      // build overlap-and-save from input
-      // may need to break Filter<T> apply into pieces -- overlap_in, apply, overlap_out
-      // apply filter and stuff upsample vector
-      // filter overlap_out      
-      // inverse upsample,
-      // stuff downsample vector into downsample overlap
-      // transform downsample overlap
-      // strip downsample
-      // stuff downsample overlap_out
-
-      // 
+      int i, j; 
       std::cerr << "In applyCont\n";
       
       if(in.size() != in_buffer_len) {
@@ -204,61 +177,57 @@ namespace SoDa {
 	throw SoDa::ReSampler_MismatchBufferSize("Out", out_buffer_len, out.size());	
       }
 
-      
-      // put the new samples at the end of the saved buffer.
-      // stuffing them as we go along.
-
-      std::cerr << "stuffing save_buffer in.size() = " << in.size() << " save_buffer.size() = " << save_buffer.size() << "\n";
-      for(i = 0, j = 0; i < save_buffer.size(); i++, j += interpolate) {
-	int_buffer[j] = save_buffer[i]; 
-      }
-      for(i = 0; i < in.size(); i++, j += interpolate) {
+      // interpolate
+      for(i = 0, j = 0; i < in.size(); i++, j += interpolate) {
 	int_buffer[j] = in[i];
       }
 
-      // take the FFT of the saved buffer
-      std::cerr << "interpolating\n";
-      dft_interp_p->fft(int_dft, int_buffer);
+      dump("invec.out", in);
+      dump("int_buffer.out", int_buffer);
+      
+      std::cerr << "Applying filter\n";
+      // apply the filter.
+      lpf.applyCont(out_tmp, int_buffer);
+      std::cerr << "Applied filter\n";
 
-      // multiply by the image
-      // but skip the parts we don't care about
-
-      for(i = 0; i < int_dft.size(); i++) {
-	out_dft[i] = Filter<T>::H[i] * int_dft[i];	
-      }
-
-      // take the inverse fft
-      std::cerr << "decimating\n";
-      dft_dec_p->ifft(out_tmp, out_dft);
+      dump("out_temp.out", out_tmp);
+      
       // now stride through and downsample ?
-      // but start after the "lead-in" for the output
-      int lead_in = save_buffer.size() * interpolate;
       for(i = 0; i < out.size(); i++) {
-	out[i] = out_tmp[lead_in + i * decimate];
+	out[i] = out_tmp[i * decimate];
       }
 
-      std::cerr << "Saving  save length = " << save_buffer.size() << "\n";
-      // save the last section of the input
-      // stuffing it as we go along
-      for(i = 0; i < save_buffer.size(); i++) {
-	save_buffer[i] = in[j]; 
-      }
+      //      lpf.applyCont(out, out);
+      
+      dump("out.out", out);
     }
       
 
   protected:
+
+    void dump(const std::string & fn, std::vector<std::complex<T>> vec) {
+      std::ofstream out(fn);
+
+      for(auto & v : vec) {
+	T mag = v.real() * v.real() + v.imag() * v.imag();
+	out << v.real() << " " << v.imag() << " " << mag << "\n";
+      }
+
+      out.close();
+    }
+    
     ///@{
     int debug_count;
     
-    std::vector<std::complex<T>> int_buffer, int_dft, save_buffer;
+    std::vector<std::complex<T>> int_buffer;
     
     int out_buffer_len, in_buffer_len; 
 
     int interpolate, decimate; 
     
-    std::shared_ptr<SoDa::FFT> dft_interp_p, dft_dec_p;
+    std::vector<std::complex<T>> out_tmp;
 
-    std::vector<std::complex<T>> out_dft, out_tmp; 
+    SoDa::Filter<T> lpf; // lowpass filter for interp/decimation
     ///@}
   };
 

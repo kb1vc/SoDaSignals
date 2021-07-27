@@ -4,6 +4,7 @@
 #include "FFT.hxx"
 #include "ChebyshevWindow.hxx"
 #include <iostream>
+#include <fstream>
 #include <memory>
 #include <list>
 #include <SoDa/Format.hxx>
@@ -58,7 +59,6 @@ namespace SoDa {
       }
     }
     
-  protected:
     Filter() {
       // do nothing constructor -- used for ReSampler, f'rinstance. 
     }
@@ -90,11 +90,12 @@ namespace SoDa {
 
       // We *have* our standards, you know.
       if(stopband_atten < 25.0) stopband_atten = 25.0;
-  
+
+      std::cerr << "Making a prototype filter with " << num_taps << "\n";
       // set all the relevant sizes
       h.resize(num_taps);
 
-      H.resize(num_taps);
+      Proto.resize(num_taps);
 
       // we don't need an fft widget for the input stuff yet.
       dft_p = nullptr; 
@@ -102,12 +103,12 @@ namespace SoDa {
       // make the prototype
       switch(filter_type) {
       case BP:
-	makePrototype(H, sample_rate, f1, f2, transition_width);        
+	makePrototype(Proto, sample_rate, f1, f2, transition_width);        
 	break;
       case BS:
-	makePrototype(H, sample_rate, f1 + transition_width, f2 - transition_width, transition_width);
+	makePrototype(Proto, sample_rate, f1 + transition_width, f2 - transition_width, transition_width);
 	// now invert the filter
-	for(auto & HE : H) {
+	for(auto & HE : Proto) {
 	  HE = std::complex<T>(1.0, 0.0) - HE;
 	}
 	break;
@@ -115,18 +116,30 @@ namespace SoDa {
 
       // take the DFT
       SoDa::FFT fft(h.size());
-      fft.ifft(h, H);
-
+      fft.ifft(h, Proto);
       // window it
       std::vector<T> cwin(num_taps);
       SoDa::ChebyshevWindow(cwin, num_taps, stopband_atten);
 
       // apply gain correction
+      std::ofstream cw("chwin.out");
+	
       T gain_corr = 1.0 / ((T) num_taps); 
       for(int i = 0; i < num_taps; i++) {
+	cw << i << " " << h[i].real() << " " << h[i].imag() << " " << cwin[i] << " ";
 	h[i] = h[i] * cwin[i] * gain_corr;
+	cw << h[i].real() << " " << h[i].imag() << "\n";
       }
+      cw.close();
+
+      fft.fft(Proto, h);
+      //      fft.shift(h, h);          
+
+      dump("Proto.out", Proto);
+      dump("final_h.out", h);
     }
+
+
 
   public:
     /**
@@ -175,7 +188,6 @@ namespace SoDa {
       if(last_invec_size != in.size()) {
 	setupOverlap(in.size(), 1); 
       }
-
 	      
       // put the new samples at the end of the saved buffer.
       for(i = 0; i < in.size(); i++) {
@@ -185,13 +197,20 @@ namespace SoDa {
       // take the FFT of the saved buffer
       dft_p->fft(saved_dft, overlap_save_buffer);
 
+      dump("saved_dft_pre.out", saved_dft);      
       // multiply by the image
       for(i = 0; i < saved_dft.size(); i++) {
+	auto v1 = saved_dft[i];
 	saved_dft[i] = H[i] * saved_dft[i];
+	writeSDFT(debug_count, i, v1, saved_dft[i], H[i]);
       }
-  
+      
+      dump("saved_dft_post.out", saved_dft);
+
+      debug_count++; 
+
       // take the inverse fft
-      dft_p->ifft(temp, saved_dft); 
+      dft_p->ifft(temp, saved_dft);
 
       // copy the result to the output, discarding the first (overlap) results. 
       T scale = 1.0 / ((T) temp.size());
@@ -203,6 +222,8 @@ namespace SoDa {
       for(i = 0, j = (in.size() - overlap_length); i < overlap_length; i++, j++) {
 	overlap_save_buffer[i] = in[j]; 
       }
+
+
     }
 
   protected:
@@ -265,7 +286,6 @@ namespace SoDa {
       overlap_length = good_size - invec_size;
       overlap_save_buffer.resize(good_size);
 
-      
       // clear the saved buffer
       for(int i = 0; i < overlap_save_buffer.size(); i++) {
 	overlap_save_buffer[i] = std::complex<T>(0.0, 0.0);
@@ -273,7 +293,7 @@ namespace SoDa {
 
       last_invec_size = invec_size;
 
-      int actual_num_taps = good_size - 1 - invec_size;
+      int actual_num_taps = overlap_length + 1;
 
       createFilterTaps(actual_num_taps);
       makeImage(good_size, actual_num_taps);
@@ -289,6 +309,7 @@ namespace SoDa {
 
     std::vector<std::complex<T>> h;
     std::vector<std::complex<T>> H;
+    std::vector<std::complex<T>> Proto;    
     
     std::vector<std::complex<T>> overlap_save_buffer;
 
@@ -320,7 +341,10 @@ namespace SoDa {
 
       std::vector<std::complex<T>> h_padded(image_size);
 
-      int i, j; 
+      int i, j;
+
+      temp.resize(image_size);      
+#if 0      
       // create the filter image.
       for(i = 0; i < image_size; i++) {
 	h_padded[i] = std::complex<T>(0.0, 0.0);
@@ -329,10 +353,39 @@ namespace SoDa {
       for(i = 0; i < num_taps; i++) {
 	h_padded[i] = h[i];
       }
-      temp.resize(image_size);
-  
+
+      dump("h_padded.out", h_padded);
+      
       // now transform it
       dft_p->fft(H, h_padded);
+#else
+      std::cerr << "About to make image from Proto of size " << Proto.size() << "\n";
+      int lower_lim = (num_taps + 1) / 2;
+      int upper_lim = image_size - (num_taps / 2);
+      for(i = 0, j = 0; i < image_size; i++) {
+	if(i < lower_lim) {
+	  std::cerr << SoDa::Format("H[%0] = Proto[%1] = %2\n")
+	    .addI(i)
+	    .addI(j)
+	    .addF(Proto[j].real());
+	  H[i] = Proto[j];
+	  j++; 
+	}
+	else if(i > upper_lim) {
+	  std::cerr << SoDa::Format("H[%0] = Proto[%1] = %2\n")
+	    .addI(i)
+	    .addI(j)
+	    .addF(Proto[j].real());
+	  H[i] = Proto[j];
+	  j++; 
+	}
+	else {
+	  H[i] = std::complex<T>(0.0, 0.0);
+	}
+      }
+      std::cerr << "Made image\n";      
+#endif      
+      dump("H.out", H);
     }
     
     void makePrototype(std::vector<std::complex<T>> & PH, T sample_rate, T f1, T f2, 
@@ -356,7 +409,15 @@ namespace SoDa {
 	hi_stop = sample_rate;
 	hi_pass = 0.5 * sample_rate; 
       }
-  
+
+      std::cerr << SoDa::Format("f1 %0 f2 %1 lo_stop %2 lo_pass %3 hi_pass %4 hi_stop %5\n")
+	.addF(f1)
+	.addF(f2)
+	.addF(lo_stop)
+	.addF(lo_pass)
+	.addF(hi_pass)
+	.addF(hi_stop);
+      
       for(int i = 0; i < num_taps; i++) {
 	int f_idx = i - (num_taps / 2);
 	T freq = bucket_width * ((T) f_idx); 
@@ -380,7 +441,27 @@ namespace SoDa {
 	}
       }
 
+      dump("PH.out", PH);
       FFT::shift(PH, PH);
+      dump("PH_S.out", PH);
+    }
+
+    void writeSDFT(int count, int idx, std::complex<T> & vin, std::complex<T> & vout, std::complex<T> & HI) {
+      auto min = vin.real() * vin.real() + vin.imag() * vin.imag();
+      auto mout = vout.real() * vout.real() + vout.imag() * vout.imag();
+      auto hmag = HI.real() * HI.real() + HI.imag() * HI.imag();
+      std::cout << "JJ " << count << " " << idx << " " << min << " " << mout << " " << hmag << "\n";
+    }
+
+    void dump(const std::string & fn, std::vector<std::complex<T>> vec) {
+      std::ofstream out(fn);
+
+      for(auto & v : vec) {
+	T mag = v.real() * v.real() + v.imag() * v.imag();
+	out << v.real() << " " << v.imag() << " " << mag << "\n";
+      }
+
+      out.close();
     }
 
     

@@ -147,7 +147,12 @@ namespace SoDa {
       }
     }
 
+    bool spectrogram(std::vector<std::complex<double>> & out, std::vector<std::complex<double>> & in);
+    bool spectrogram(std::vector<std::complex<float>> & out, std::vector<std::complex<float>> & in);    
+
   private:
+    void initBlackmanHarris(int size);
+    
     /**
      * @brief throw an exception if either the input or output buffer size does
      * not match the plan
@@ -163,6 +168,12 @@ namespace SoDa {
     // use these to create the basic plans.  sigh. 
     fftwf_complex * f_dummy_in, * f_dummy_out;    
     fftw_complex * d_dummy_in, * d_dummy_out;
+
+    // spectrogram stuff
+    std::vector<float> w_float; // blackman-harris window
+    std::vector<double> w_double; // blackman-harris window
+    std::vector<std::complex<float>> s_cfloat; // spectrogram temporary
+    std::vector<std::complex<double>> s_cdouble; // spectrogram temporary     
     
     size_t dim;
   };
