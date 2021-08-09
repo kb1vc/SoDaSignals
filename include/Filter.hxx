@@ -94,8 +94,6 @@ namespace SoDa {
       // now do the factor search
       int fft_len = findGoodSize(std::list<int> { 2, 3, 5, 7 }, pow_of_two, target, 1);
 
-      std::cout << "fft length = " << fft_len << "\n";
-      
       // Now we know the size of the overlap.
       overlap_len = fft_len - buffer_len; 
 
@@ -103,15 +101,16 @@ namespace SoDa {
       int num_taps = overlap_len + 1;
       auto Hi = createImage(num_taps, sample_rate, f_lo, f_hi, transition_width, typ);
 
+      dump("Hi.out", Hi);
+      
       // now apply a chebyshev window to it
       auto hwp = windowImpulse(Hi);
-
+      dump("hwp.out", hwp);
+      
       // expand the filter
       H = expandFilter(hwp, fft_len);
-
       dump("H.out", H);
-      dump("Hi.out", Hi);
-
+      
       // create the "save buffer" -- this is the buffer that
       // will hold the overlap + the new buffer. 
       overlap_save_buffer.resize(fft_len); 
@@ -126,10 +125,6 @@ namespace SoDa {
       // make sure the amplitude is preserved
       scale_factor = 1.0 / T(fft_len);
 
-      std::cerr << SoDa::Format("fft len %0 overlap_len %1 num_taps %2\n")
-	.addI(fft_len)
-	.addI(overlap_len)
-	.addI(num_taps);
     }
 
     
@@ -156,31 +151,23 @@ namespace SoDa {
 
       T f_incr = 1.0 / num_taps;
 
-      std::cout << f_lo << " " << f_hi << " " << trans << "\n";
-      std::cout << lo_stop << " " << lo_pass << " " << hi_pass << " " << hi_stop << "\n";
       int i;
       double f; 
       for(i = 0, f = -0.5 ; i < num_taps; i++, f += f_incr) {
-	std::cerr << f << " ";
 	if((f < lo_stop) || (f > hi_stop)) {
 	  H[i] = std::complex<T>(0.0, 0.0);
-	  std::cerr << ".";
 	}
 	else if((f > lo_pass) && (f < hi_pass)) {
 	  H[i] = std::complex<T>(1.0, 0.0);
-	  std::cerr << "-";
 	}
 	else if(f < lo_pass) {
 	  // transition band.
 	  H[i] = std::complex<T>((f - lo_stop) * trans, 0.0);
-	  std::cerr << "/";
 	}
 	else if(f > hi_pass) {
 	  // transition band.
 	  H[i] = std::complex<T>(1.0 - (f - hi_stop) * trans, 0.0);
-	  std::cerr << "\\";
 	}
-	std::cerr << "\n";	
       }
 
 
@@ -208,20 +195,20 @@ namespace SoDa {
       SoDa::FFT fft(flen);
       fft.ifft(hi, Hi);
 
+      dump("hi_pre.out", hi);
+
       // now create a chebyshev-dolph window
       std::vector<T> cwin(flen);
       SoDa::ChebyshevWindow(cwin, flen, 25.0);
 
-      dump("hi_pre.out", hi);
-      dump("cwin.out", cwin);
-      
       // apply the window
       T sf = 1.0 / T(flen);
       for(int i = 0; i < flen; i++) {
 	hi[i] = hi[i] * cwin[i];
       }
-      dump("hi_post.out", hi);
 
+      fft.shift(hi, hi);
+      
       return hi;
     }
 
@@ -237,19 +224,28 @@ namespace SoDa {
 
       // now copy the impulse response to a bigger h
       std::vector<std::complex<T>> h(new_len);
+      // zero out the impulse response
       for(int i = 0; i < new_len; i++) {
-	if(i < short_len) {
-	  h[i] = hi[i]; 
-	}
-	else {
-	  h[i] = std::complex<T>(0.0, 0.0); 
-	}
+	h[i] = std::complex<T>(0.0, 0.0); 	
       }
+      // now fill
+      for(int i = 0; i < short_len; i++) {
+	int j = i;
+	h[j] = hi[i]; 
+      }
+      
+      dump("h_exp.out", h);
 
       // now expand.
       std::vector<std::complex<T>> H(new_len);
       SoDa::FFT fft(new_len);
       fft.fft(H, h);
+
+      // scale it
+      T scale = 1.0 / (T(short_len) * T(new_len));
+      for(auto & Hk : H) {
+	Hk = Hk * scale; 
+      }
       
       return H; 
     }
@@ -280,46 +276,27 @@ namespace SoDa {
       for(i = 0; i < in.size(); i++) {
 	overlap_save_buffer[i + overlap_len] = in[i];
       }
-      
-      i = 0; 
-      for(auto v : overlap_save_buffer) {
-	std::cout << SoDa::Format("OSB %0 %1 %2 %3\n")
-	  .addI(debug_count)
-	  .addI(i++)
-	  .addF(v.real())
-	  .addF(v.imag());
-      }
 
+      dump("osb.out", overlap_save_buffer);
       // take the FFT of the saved buffer
       dft_p->fft(saved_dft, overlap_save_buffer);
 
-      dump("saved_dft_in.out", saved_dft);      
+      dump("saved_dft_pre.out", saved_dft);       
       // multiply by the image
-      for(i = 0; 0 && (i < saved_dft.size()); i++) {
+      for(i = 0; i < saved_dft.size(); i++) {
 	saved_dft[i] =  H[i] * saved_dft[i];
       }
 
-      dump("app_H.out", H);
-      dump("saved_dft_out.out", saved_dft);
-
+      dump("saved_dft_post.out", saved_dft);
+      
       // take the inverse fft
       dft_p->ifft(saved_idft, saved_dft);
 
       // copy the result to the output, discarding the first (overlap) results. 
       for(i = 0; i < out.size(); i++) {
-	out[i] = saved_idft[i] * scale_factor * scale_factor; // saved_idft.at(i + overlap_len) * scale_factor * scale_factor; 
+	out[i] = saved_idft.at(i + overlap_len);
       }
 
-      i = 0; 
-      for(auto v : saved_idft) {
-	std::cout << SoDa::Format("OSO %0 %1 %2 %3\n")
-	  .addI(debug_count)
-	  .addI(i++)
-	  .addF(v.real())
-	  .addF(v.imag());
-      }
-
-      debug_count++; 
       
       dump("saved_idft.out", saved_idft);
       // save the last section of the input
