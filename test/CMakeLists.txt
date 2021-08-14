@@ -2,10 +2,10 @@ FIND_PACKAGE(SoDaUtils REQUIRED)
 
 add_executable(CircularBufferTest CircularBufferTest.cxx)
 
-#add_executable(ReSamplerTest ReSamplerTest.cxx)
-#target_link_libraries(ReSamplerTest sodasignals ${SoDaUtils_LIBRARIES})
-#target_link_directories(ReSamplerTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
-#target_include_directories(ReSamplerTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
+add_executable(ReSamplerTest ReSamplerTest.cxx)
+target_link_libraries(ReSamplerTest sodasignals ${SoDaUtils_LIBRARIES})
+target_link_directories(ReSamplerTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
+target_include_directories(ReSamplerTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 
 
 add_executable(FilterTest FilterTest.cxx)

@@ -1,6 +1,7 @@
 #pragma once
 #include <complex>
 #include <vector>
+#include <functional>
 #include "FFT.hxx"
 #include "ChebyshevWindow.hxx"
 #include <iostream>
@@ -80,7 +81,9 @@ namespace SoDa {
 
     void initFilter(FilterType typ, int min_num_taps, T sample_rate, T f_lo, T f_hi, 
 		    T transition_width, T stopband_atten, 
-		    int buffer_len)
+		    int buffer_len, 
+		    std::function<bool(const int)> test = 
+		    [] (int s) -> bool { return true; })
     {
 
       debug_count = 0; 
@@ -92,7 +95,7 @@ namespace SoDa {
       }
 
       // now do the factor search
-      int fft_len = findGoodSize(std::list<int> { 2, 3, 5, 7 }, pow_of_two, target, 1);
+      int fft_len = findGoodSize(std::list<int> { 2, 3, 5, 7 }, pow_of_two, target, 1, test);
 
       // Now we know the size of the overlap.
       overlap_len = fft_len - buffer_len; 
@@ -101,15 +104,11 @@ namespace SoDa {
       int num_taps = overlap_len + 1;
       auto Hi = createImage(num_taps, sample_rate, f_lo, f_hi, transition_width, typ);
 
-      dump("Hi.out", Hi);
-      
       // now apply a chebyshev window to it
       auto hwp = windowImpulse(Hi);
-      dump("hwp.out", hwp);
       
       // expand the filter
       H = expandFilter(hwp, fft_len);
-      dump("H.out", H);
       
       // create the "save buffer" -- this is the buffer that
       // will hold the overlap + the new buffer. 
@@ -195,8 +194,6 @@ namespace SoDa {
       SoDa::FFT fft(flen);
       fft.ifft(hi, Hi);
 
-      dump("hi_pre.out", hi);
-
       // now create a chebyshev-dolph window
       std::vector<T> cwin(flen);
       SoDa::ChebyshevWindow(cwin, flen, 25.0);
@@ -234,8 +231,6 @@ namespace SoDa {
 	h[j] = hi[i]; 
       }
       
-      dump("h_exp.out", h);
-
       // now expand.
       std::vector<std::complex<T>> H(new_len);
       SoDa::FFT fft(new_len);
@@ -260,6 +255,43 @@ namespace SoDa {
     }
     
     /** 
+     * @brief Apply the filter to a buffer in a sequence of buffers, but don't 
+     * apply IFFT to the frequency domain result. 
+     * 
+     * This method implements an overlap-and-save filter, suitable for a continous 
+     * signal stream. 
+     * 
+     * @param out The frequency domain output of the filter. 
+     * @param in The input to the filter. 
+     */
+    void applyContFFT(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in) {
+      int i, j;
+
+      // put the new samples at the end of the saved buffer.
+      for(i = 0; i < in.size(); i++) {
+	overlap_save_buffer[i + overlap_len] = in[i];
+      }
+
+      // take the FFT of the saved buffer
+      dft_p->fft(out, overlap_save_buffer);
+
+      // multiply by the image
+      for(i = 0; i < out.size(); i++) {
+	out[i] =  H[i] * saved_dft[i];
+      }
+
+      // copy the result to the output, discarding the first (overlap) results. 
+      for(i = 0; i < out.size(); i++) {
+	out[i] = saved_dft.at(i + overlap_len);
+      }
+
+      // save the last section of the input
+      for(i = 0, j = (in.size() - overlap_len); i < overlap_len; i++, j++) {
+	overlap_save_buffer[i] = in[j]; 
+      }
+    }
+
+    /** 
      * @brief Apply the filter to a buffer in a sequence of buffers. 
      * 
      * This method implements an overlap-and-save filter, suitable for a continous 
@@ -270,41 +302,18 @@ namespace SoDa {
      */
     void applyCont(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in)
     {
-      int i, j;
-
-      // put the new samples at the end of the saved buffer.
-      for(i = 0; i < in.size(); i++) {
-	overlap_save_buffer[i + overlap_len] = in[i];
-      }
-
-      dump("osb.out", overlap_save_buffer);
-      // take the FFT of the saved buffer
-      dft_p->fft(saved_dft, overlap_save_buffer);
-
-      dump("saved_dft_pre.out", saved_dft);       
-      // multiply by the image
-      for(i = 0; i < saved_dft.size(); i++) {
-	saved_dft[i] =  H[i] * saved_dft[i];
-      }
-
-      dump("saved_dft_post.out", saved_dft);
+      applyContFFT(saved_dft, in); 
       
       // take the inverse fft
       dft_p->ifft(saved_idft, saved_dft);
 
       // copy the result to the output, discarding the first (overlap) results. 
-      for(i = 0; i < out.size(); i++) {
+      for(int i = 0; i < out.size(); i++) {
 	out[i] = saved_idft.at(i + overlap_len);
-      }
-
-      
-      dump("saved_idft.out", saved_idft);
-      // save the last section of the input
-      for(i = 0, j = (in.size() - overlap_len); i < overlap_len; i++, j++) {
-	overlap_save_buffer[i] = in[j]; 
       }
     }
 
+    unsigned int getOverlapLen() { return overlap_len; }
   protected:
     /**
      * @brief find a good FFT size. 
@@ -320,9 +329,11 @@ namespace SoDa {
      * @param best_so_far the best candidate Q we've seen in the search so far.  start out with 2(B+N) we'll do better.
      * @param target (N + B)
      * @param C current length -- not useful until C > target
+     * @param isAcceptable function returning true iff the calculated Q meets some criteria (e.g. it is a multiple of 9)
      * @return best length so far.  we don't need the factors, just the length
      */
-    int findGoodSize(std::list<int> factors, int best_so_far, int target, int C)
+    int findGoodSize(std::list<int> factors, int best_so_far, int target, int C,
+		     std::function<bool(int)> isAcceptable)
     {
 
       if(factors.empty()) return best_so_far; 
@@ -331,10 +342,10 @@ namespace SoDa {
       rfactors.pop_front();
 
       for(int f = C; f < best_so_far; f *= m) {
-	if((f >= target) && (f < best_so_far)) {
+	if((f >= target) && (f < best_so_far) && isAcceptable(f)) {
 	  best_so_far = f;
 	}
-	best_so_far = findGoodSize(rfactors, best_so_far, target, f);
+	best_so_far = findGoodSize(rfactors, best_so_far, target, f, isAcceptable);
       }
       return best_so_far; 
     }

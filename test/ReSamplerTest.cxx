@@ -50,7 +50,7 @@ int main() {
       std::cerr << "Resampling\n";
 
       std::cerr << " The input vector is getting fiddled with in some odd way. \n";
-      resamp.apply(out, in);
+      resamp.applyCont(out, in);
 
       std::cerr << "Doing in/out xforms\n";
       // transform it

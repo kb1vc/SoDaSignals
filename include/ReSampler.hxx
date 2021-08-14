@@ -82,7 +82,7 @@ namespace SoDa {
       in_buffer_len(in_buffer_len), interpolate(interpolate), decimate(decimate)
     {
       transition_width = 0.1;
-      out_buffer_len = (in_buffer_len * interpolate) / decimate;
+      int out_buffer_len = (in_buffer_len * interpolate) / decimate;
 
       if(((out_buffer_len * decimate) / interpolate) != in_buffer_len) {
 	// then we screwed up and the ratio won't work. 
@@ -97,24 +97,37 @@ namespace SoDa {
       
 
       // now setup the image and overlap-and-save buffers
+      int overlap_mul = decimate;
+      // we need an even overlap to make the zero stuffing
+      // symmetric
+      if(overlap_mul & 1) { // if it is odd
+	overlap_mul = overlap_mul * 2; 
+      }
+
+      int diff_len = out_buffer_len - in_buffer_len;
+      
       lpf.initFilter(SoDa::FilterType::BP, 41, 
 		     sample_rate, -freq_corner, freq_corner,
-		     0.1 / interpolate, // transition_width * sample_rate,
+		     0.1 * freq_corner,
 		     50, 
-		     in_buffer_len, 
-		     decimate);
-      
-      
-      
-      int interpolate_buffer_size = in_buffer_len * interpolate;
+		     in_buffer_len,
+		     // overlap buffer length must be an integer multiple of
+		     // interp / decimate
+		     [diff_len, overlap_mul] (int s) ->
+		     bool { return ( ( s - diff_len) % overlap_mul) == 0; });
 
-      out_tmp.resize(interpolate_buffer_size);
-      int_buffer.resize(interpolate_buffer_size);
+      
+      
+      
+      int pre_image_size = in_buffer_len + lpf.getOverlapLen();
+      pre_image.resize(pre_image_size); 
 
-      // zero out the interpolated vector
-      for(int i = 0; i < interpolate_buffer_size; i++) {
-	int_buffer[i] = std::complex<T>(0.0, 0.0);
-      }
+      int interp_image_size = out_buffer_len + lpf.getOverlapLen() * interpolate / decimate;
+      interp_image.resize(interp_image_size); 
+
+      resamp_res.resize(interp_image_size);
+
+      dft_p = new SoDa::FFT(interp_image_size);
       
       debug_count = 0; 
     }
@@ -127,80 +140,48 @@ namespace SoDa {
     }
     
     /** 
-     * @brief Apply the Resampler to a single isolated buffer : we don't do that.
+     * @brief Apply the Resampler to a buffer stream
      * 
      * @param out The output of the filter. 
      * @param in The input to the filter. 
      */
-    void apply(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in) {
+    void applyCont(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in) {
       std::ofstream tmp("rsinc_in.dat");
-      for(int i = 0; i < in.size(); i++) {
-	tmp << in[i].real() << " " << in[i].imag() << "\n";
-      }
-      tmp.close();
-      applyCont(out, in);
-    }
 
-    void findMax(std::vector<std::complex<T>> & v, const std::string & name) {
-      int imax = 0;
-      T vmax = 0.0;
-      for(int i = 0; i < v.size(); i++) {
-	T ma = abs(v[i]);
-	if(ma > vmax) {
-	  vmax = ma;
-	  imax = i; 
+      // do the anti-aliasing filter
+      lpf.applyContFFT(pre_image, in);
+
+      // how many zeros do we need to stuff? 
+      auto M = lpf.getOverlapLen();
+      int discard = M * interpolate / decimate;      
+      int stufflen = discard + out.size() - in.size();
+      int half = (in.size() + M) / 2;
+      // now the zero stuffing of M * interp / decimation + (out.len - in.len) zeros
+      int j = 0;
+      for(int i = 0; i < interp_image.size(); i++) {
+	if(i < half) {
+	  interp_image[i] = pre_image[j++];
+	}
+	else if(i < (half + stufflen)) {
+	  interp_image[i] = std::complex<T>(0.0, 0.0);
+	}
+	else {
+	  interp_image[i] = pre_image[j++];	  
 	}
       }
-      std::cerr << SoDa::Format("Max at %0[%1] = %2\n")
-	.addS(name)
-	.addI(imax)
-	.addF(vmax);
+
+      // now ifft
+      dft_p->ifft(resamp_res, interp_image);
+
+
+      // discard first M * interp / decimation samples.
+      for(int i = 0; i < out.size(); i++) {
+	out[i] = resamp_res[i + discard];
+      }
+
+      // return. 
     }
-    /** 
-     * @brief Apply the filter to a buffer in a sequence of buffers. 
-     * 
-     * This method implements an overlap-and-save filter, suitable for a continous 
-     * signal stream. 
-     * 
-     * @param out The output of the filter. 
-     * @param in The input to the filter. 
-     */
-    void applyCont(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in)
-    {
-      int i, j; 
-      std::cerr << "In applyCont\n";
-      
-      if(in.size() != in_buffer_len) {
-	throw SoDa::ReSampler_MismatchBufferSize("In", in_buffer_len, in.size());
-      }
-      if(out.size() != out_buffer_len) {
-	throw SoDa::ReSampler_MismatchBufferSize("Out", out_buffer_len, out.size());	
-      }
 
-      // interpolate
-      for(i = 0, j = 0; i < in.size(); i++, j += interpolate) {
-	int_buffer[j] = in[i];
-      }
-
-      dump("invec.out", in);
-      dump("int_buffer.out", int_buffer);
-      
-      std::cerr << "Applying filter\n";
-      // apply the filter.
-      lpf.applyCont(out_tmp, int_buffer);
-      std::cerr << "Applied filter\n";
-
-      dump("out_temp.out", out_tmp);
-      
-      // now stride through and downsample ?
-      for(i = 0; i < out.size(); i++) {
-	out[i] = out_tmp[i * decimate];
-      }
-
-      //      lpf.applyCont(out, out);
-      
-      dump("out.out", out);
-    }
       
 
   protected:
@@ -219,15 +200,18 @@ namespace SoDa {
     ///@{
     int debug_count;
     
-    std::vector<std::complex<T>> int_buffer;
-    
-    int out_buffer_len, in_buffer_len; 
-
     int interpolate, decimate; 
-    
-    std::vector<std::complex<T>> out_tmp;
+    int in_buffer_len; 
 
+    std::vector<std::complex<T>> pre_image;
+    std::vector<std::complex<T>> interp_image;
+    std::vector<std::complex<T>> resamp_res;
+    
+    
     SoDa::Filter<T> lpf; // lowpass filter for interp/decimation
+    SoDa::FFT * dft_p;
+    
+    
     ///@}
   };
 
