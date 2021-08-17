@@ -10,15 +10,20 @@ int main() {
   int sample_rate = 1000; 
   // a bandpass filter from
   try {
-    SoDa::ReSampler<TEST_DTYPE> resamp(200,
-				  2, //2, // 4,
-				  1, // 5, 
+    int interp = 2;
+    int decimate = 5;
+    int inbuflen = 7500;
+    SoDa::ReSampler<TEST_DTYPE> resamp(inbuflen,
+				  interp, //2, // 4,
+				  decimate, // 5, 
 				  0.05);
 
     std::cerr << "About to build test vectors\n";
     // build an input vector of 250 elements.
     // We're going to resample it to 200.
-    std::vector<std::complex<TEST_DTYPE>> in(200), out(400); // out(400);
+    std::vector<std::complex<TEST_DTYPE>> in(inbuflen);
+    std::vector<std::complex<TEST_DTYPE>> out(in.size() * interp / decimate);     
+
 
     // put something in at 0.2 (f_nyquist / 2)
 
@@ -38,7 +43,7 @@ int main() {
     int ko = 0;
 
     std::cerr << "Creating sine\n";
-    int num_trials = 1;
+    int num_trials = 3;
     for(int tr = 0; tr < num_trials; tr++) {
       for(int i = 0; i < in.size(); i++) {
 	in[i] = std::complex<TEST_DTYPE>(cos(ang), sin(ang));
@@ -55,10 +60,10 @@ int main() {
       std::cerr << "Doing in/out xforms\n";
       // transform it
       inxform.fft(in_fft, in);
-      //inxform.shift(in_fft, in_fft);
+      inxform.shift(in_fft, in_fft);
       // transform the result
       outxform.fft(out_fft, out);
-      //outxform.shift(out_fft, out_fft);      
+      outxform.shift(out_fft, out_fft);      
 
       std::cerr << "Printing\n";
       for(int i = 0; i < in.size(); i++, ki++) {

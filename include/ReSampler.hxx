@@ -92,9 +92,19 @@ namespace SoDa {
 
       // we need a filter.  Nothing fancy.  An LPF at 0.5 / I - TW
       // sample rate is arbitrary, make it 1M
+
+      // The trick here is that we have two cases.
+      //
+      // In the first, we're not doing any decimation.  In this case,
+      // we need to make sure that, after we upsample a signal at sample
+      // rate Fs by a factor U, we must BPF the result over the range
+      // -Fs/2 to Fs/2 *over the new range U*Fs.  
+
       float sample_rate = 1;
-      float freq_corner = 0.4 / ((float) interpolate); // (0.4 /((float) interpolate) - transition_width);
-      
+      float fq1 = 0.4 / ((float) interpolate); // (0.4 /((float) interpolate) - transition_width);
+      float fq2 = 10;
+
+      float freq_corner = (fq1 < fq2) ? fq1 : fq2; 
 
       // now setup the image and overlap-and-save buffers
       int overlap_mul = decimate;
@@ -116,18 +126,23 @@ namespace SoDa {
 		     [diff_len, overlap_mul] (int s) ->
 		     bool { return ( ( s - diff_len) % overlap_mul) == 0; });
 
-      
-      
-      
       int pre_image_size = in_buffer_len + lpf.getOverlapLen();
       pre_image.resize(pre_image_size); 
 
-      int interp_image_size = out_buffer_len + lpf.getOverlapLen() * interpolate / decimate;
+      int interp_image_size = pre_image_size * interpolate; 
       interp_image.resize(interp_image_size); 
 
       resamp_res.resize(interp_image_size);
 
       dft_p = new SoDa::FFT(interp_image_size);
+
+      std::cerr << SoDa::Format("in_buffer_len %4, out_buffer_len %5, pre_image %0, interp_image %1, M %2, filter buflen %3\n")
+	.addI(pre_image_size)
+	.addI(interp_image_size)
+	.addI(lpf.getOverlapLen())
+	.addI(lpf.getSaveBufLen())
+	.addI(in_buffer_len)
+	.addI(out_buffer_len);
       
       debug_count = 0; 
     }
@@ -146,39 +161,66 @@ namespace SoDa {
      * @param in The input to the filter. 
      */
     void applyCont(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in) {
-      std::ofstream tmp("rsinc_in.dat");
-
+      std::cerr << "About to fft to pre-image\n";
       // do the anti-aliasing filter
       lpf.applyContFFT(pre_image, in);
+      std::cerr << "Got through pre-image\n";
 
+      dump(SoDa::Format("RSInBuf%0.dat").addI(debug_count).str(), in);
+
+      dump(SoDa::Format("RSPreImage%0.dat").addI(debug_count).str(), pre_image);
+      
       // how many zeros do we need to stuff? 
       auto M = lpf.getOverlapLen();
-      int discard = M * interpolate / decimate;      
-      int stufflen = discard + out.size() - in.size();
-      int half = (in.size() + M) / 2;
+      int half = pre_image.size() / 2; 
       // now the zero stuffing of M * interp / decimation + (out.len - in.len) zeros
+      std::cerr << "Stuffing\n";
+      std::cerr << SoDa::Format("Stuffing interp_image from 0 to %0 and from %1 to %2. pre_image size %3\n")
+	.addI(half-1)
+	.addI(interp_image.size() - half)
+	.addI(interp_image.size() - 1)
+	.addI(pre_image.size()); 
       int j = 0;
       for(int i = 0; i < interp_image.size(); i++) {
 	if(i < half) {
 	  interp_image[i] = pre_image[j++];
 	}
-	else if(i < (half + stufflen)) {
+	else if(i < (interp_image.size() - half)) {
 	  interp_image[i] = std::complex<T>(0.0, 0.0);
 	}
 	else {
 	  interp_image[i] = pre_image[j++];	  
 	}
       }
+      std::cerr << "Stuffed\n";
 
       // now ifft
       dft_p->ifft(resamp_res, interp_image);
 
+      std::cerr << "Discarding\n";
 
+      dump(SoDa::Format("RSIntImage%0.dat").addI(debug_count).str(), interp_image);
+
+
+      int discard = M * interpolate;
+      // fill output buffer up to the right size.
+      int out_len = (resamp_res.size() - discard) / decimate;
+      
       // discard first M * interp / decimation samples.
-      for(int i = 0; i < out.size(); i++) {
-	out[i] = resamp_res[i + discard];
+      std::cerr << SoDa::Format("ReSampling from [%0 %1 %2] -> %3  resamp_res.size  %4 interp_image.size %5\n")
+	.addI(discard)
+	.addI((out_len - 1) * decimate + discard)
+	.addI(decimate)
+	.addI(out_len)
+	.addI(resamp_res.size())
+	.addI(interp_image.size());
+
+      for(int i = 0; i < out_len; i++) {
+	out[i] = resamp_res.at(i * decimate + discard);
       }
 
+      debug_count++; 
+      std::cerr << "Done\n";
       // return. 
     }
 
