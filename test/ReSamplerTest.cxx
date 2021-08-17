@@ -10,8 +10,8 @@ int main() {
   int sample_rate = 1000; 
   // a bandpass filter from
   try {
-    int interp = 2;
-    int decimate = 5;
+    int interp = 5;
+    int decimate = 2;
     int inbuflen = 7500;
     SoDa::ReSampler<TEST_DTYPE> resamp(inbuflen,
 				  interp, //2, // 4,
@@ -28,7 +28,7 @@ int main() {
     // put something in at 0.2 (f_nyquist / 2)
 
     TEST_DTYPE ang = 0.0;
-    TEST_DTYPE ang_inc = 2 * M_PI / 23.0;
+    TEST_DTYPE ang_inc = 2 * M_PI / 4.0;
 
     std::ofstream inf("rs_in.dat");
     std::ofstream outf("rs_out.dat");
@@ -39,6 +39,12 @@ int main() {
     SoDa::FFT outxform(out.size());
     std::vector<std::complex<TEST_DTYPE>> out_fft(out.size());
 
+    std::cerr << SoDa::Format("In size = %0 out size = %1 interp = %2 decimate = %3\n")
+      .addI(in.size())
+      .addI(out.size())
+      .addI(interp)
+      .addI(decimate);
+    
     int ki = 0;
     int ko = 0;
 
