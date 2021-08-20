@@ -135,22 +135,16 @@ namespace SoDa {
      */
     void applyCont(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in) {
 
-      std::cerr << SoDa::Format("stuffing interp buffer  in.size %0  interp.size %1  out.size %2\n")
-	.addI(in.size())
-	.addI(interp_buffer.size())
-	.addI(out.size());
       
       // zero stuff -- note the interp_buffer is pre-zeroed.
-      float scale = interpolate; 
+      T scale = interpolate; 
       for(int i = 0; i < in.size(); i++) {
 	interp_buffer[i * interpolate] = in[i] * scale; 
       }
-      std::cerr << "About to apply filter\n";
       // do the anti-aliasing filter and decimate on the way out. 
       lpf.applyCont(out, interp_buffer, decimate);
 
       debug_count++; 
-      std::cerr << "Done\n";
       return; 
     }
 

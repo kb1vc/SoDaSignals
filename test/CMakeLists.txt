@@ -34,3 +34,7 @@ target_include_directories(FFTTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUt
 
 
 
+add_executable(ReSamplerSweep ReSamplerSweep.cxx)
+target_link_libraries(ReSamplerSweep sodasignals ${SoDaUtils_LIBRARIES})
+target_link_directories(ReSamplerSweep PUBLIC ${SoDaUtils_LIBRARY_DIRS})
+target_include_directories(ReSamplerSweep PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})

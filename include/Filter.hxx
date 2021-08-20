@@ -275,13 +275,10 @@ namespace SoDa {
       // take the FFT of the saved buffer
       dft_p->fft(out, overlap_save_buffer);
 
-      dump(SoDa::Format("FiltH%0.dat").addI(debug_count).str(), H);
-      dump(SoDa::Format("FiltPreOut%0.dat").addI(debug_count).str(), out);                  
       // multiply by the image
       for(i = 0; i < out.size(); i++) {
 	out[i] =  H[i] * out[i];
       }
-      dump(SoDa::Format("FiltPostOut%0.dat").addI(debug_count).str(), out);
       
       debug_count++; 
 
@@ -307,26 +304,15 @@ namespace SoDa {
 		   std::vector<std::complex<T>> & in, 
 		   int decimation = 1)
     {
-      std::cerr << "Filter::applyCont starting\n";
       applyContFFT(saved_dft, in); 
       
-      std::cerr << "Inverse dft\n";
       // take the inverse fft
       dft_p->ifft(saved_idft, saved_dft);
 
-      std::cerr << SoDa::Format("in.size %0 out.size %1 saved_idft.size %2 overlap_len %3 decimation %4\n")
-	.addI(in.size())
-	.addI(out.size())
-	.addI(saved_idft.size())
-	.addI(overlap_len)
-	.addI(decimation);
-      
-      std::cerr << "down sampling\n";
       // copy the result to the output, discarding the first (overlap) results. 
       for(int i = 0; i < out.size(); i++) {
 	out[i] = saved_idft.at(i * decimation + overlap_len);
       }
-      std::cerr << "Filter::applyCont done\n";
     }
 
 
