@@ -1,5 +1,6 @@
 #include "ChebyshevWindow.hxx"
 #include "FFT.hxx"
+#include <cstddef>
 #include <complex>
 #include <iostream>
 
