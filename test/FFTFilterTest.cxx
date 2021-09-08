@@ -3,6 +3,8 @@
 #include "FFT.hxx"
 #include <fstream>
 #include <algorithm>
+#include <cmath>
+#include <complex>
 
 std::ofstream debug("debug.out");
 double magAtFreq1(double freq, std::vector<std::complex<double>> & ovec, SoDa::FFT & fft) {
@@ -13,8 +15,7 @@ double magAtFreq1(double freq, std::vector<std::complex<double>> & ovec, SoDa::F
   // find the mag at the index
   int ovsize = ovec.size();
   int idx = (ovsize >> 1) + (int) ((double (ovsize)) * freq);
-  debug << freq << " " << idx << "\n";
-  return abs(sv[idx]);
+  return std::abs(sv[idx]);
 
 }
 
@@ -28,13 +29,8 @@ double magAtFreq(double freq, std::vector<std::complex<double>> & ovec, SoDa::FF
   int ovsize = ovec.size();
   int idx = (ovsize >> 1) + (int) ((double (ovsize)) * freq);
 
-  for(int i = 0; i < sv.size(); i++) {
-    auto v =sv[i];
-    double m = v.real() * v.real() + v.imag() * v.imag();
-    debug << "K " << freq << " " << i << " " << m << "\n";
-  }
 
-  return abs(sv[idx]);  
+  return std::abs(sv[idx]);  
 }
 
 double magAtFreq2(double freq, std::vector<std::complex<double>> & ovec, SoDa::FFT & fft) {
@@ -45,7 +41,6 @@ double magAtFreq2(double freq, std::vector<std::complex<double>> & ovec, SoDa::F
   // find the mag at the index
   int ovsize = ovec.size();
   int idx = (ovsize >> 1) + (int) ((double (ovsize)) * freq);
-  debug << freq << " " << idx << "\n";
 
   double ourpower = 0.0;
   for(int i = -2; i < 3; i++) {
@@ -108,7 +103,7 @@ int main() {
   int buf_mult = 20; 
   for(double freq = -0.5 * f_sample_rate; 
       freq < 0.5 * f_sample_rate; 
-      freq += 0.0125 * f_sample_rate) {
+      freq += 0.003125 * f_sample_rate) {
     // build a vector
     std::vector<std::complex<double>> test(buf_len);
     std::vector<std::complex<double>> out_LP(buf_len);
@@ -131,12 +126,12 @@ int main() {
       filt_BS.applyCont(out_BS, test);
     }
 
-#if 0
+#if 1
     // now measure the magnitude of the last element of the output
-    double mag_LP = abs(out_LP[out_LP.size() / 2]);
-    double mag_HP = abs(out_HP[out_HP.size() / 2]);
-    double mag_BP = abs(out_BP[out_BP.size() / 2]);
-    double mag_BS = abs(out_BS[out_BS.size() / 2]);        
+    double mag_LP = std::abs(out_LP[out_LP.size() / 2]);
+    double mag_HP = std::abs(out_HP[out_HP.size() / 2]);
+    double mag_BP = std::abs(out_BP[out_BP.size() / 2]);
+    double mag_BS = std::abs(out_BS[out_BS.size() / 2]);        
 #else
     double mag_LP = magAtFreq(freq / f_sample_rate, out_LP, fft);
     double mag_HP = magAtFreq(freq / f_sample_rate, out_HP, fft);
@@ -144,7 +139,8 @@ int main() {
     double mag_BS = magAtFreq(freq / f_sample_rate, out_BS, fft);
 #endif
 #if 1    
-    std::cout << freq << " " 
+    std::cout << freq << " "
+	      << mag_HP << " "
 	      << mag_LP << " "
 	      << mag_BP << " "
 	      << mag_BS << "\n";

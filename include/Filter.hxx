@@ -103,13 +103,13 @@ namespace SoDa {
       // create a frequency domain image of the filter
       int num_taps = overlap_len + 1;
       auto Hi = createImage(num_taps, sample_rate, f_lo, f_hi, transition_width, typ);
-
+      
       // now apply a chebyshev window to it
       auto hwp = windowImpulse(Hi);
       
       // expand the filter
       H = expandFilter(hwp, fft_len);
-      
+
       // create the "save buffer" -- this is the buffer that
       // will hold the overlap + the new buffer. 
       overlap_save_buffer.resize(fft_len); 

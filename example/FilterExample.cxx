@@ -10,25 +10,25 @@ int main() {
 		       f_sample_rate, 
 		       0.0, 0.15 * f_sample_rate,
 		       0.0025 * f_sample_rate,
-		       50);
+		       50, sample_rate);
   
   SoDa::Filter<double> filt_HP(SoDa::FilterType::BP, num_taps, 
 		       f_sample_rate,
 		       0.1 * f_sample_rate, 0.5 * f_sample_rate,
 		       0.0025 * f_sample_rate,
-		       50);
+		       50, sample_rate);
   
   SoDa::Filter<double> filt_BP(SoDa::FilterType::BP, num_taps,
 		       f_sample_rate,
 		       -0.04 * f_sample_rate, 0.04 * f_sample_rate,
 		       0.01 * f_sample_rate,
-		       50);
+		       50, sample_rate);
   
   SoDa::Filter<double> filt_BS(SoDa::FilterType::BS, num_taps, 
 		       f_sample_rate,
 		       -0.3 * f_sample_rate, -0.25 * f_sample_rate,
 		       0.0025 * f_sample_rate,
-		       50);
+		       50, sample_rate);
   
 
   

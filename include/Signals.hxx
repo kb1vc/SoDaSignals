@@ -1,4 +1,8 @@
-/* this file exists solely to create a mainpage.  */
+/* this file exists primarily to create a mainpage.  */
+
+#include "Filter.hxx"
+#include "ReSampler.hxx"
+#include "FFT.hxx"
 
 ///
 /// @file Signals.hxx

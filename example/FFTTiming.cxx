@@ -15,6 +15,10 @@ float bump_ang(float a, float ai) {
 
 int main(int argc, char * argv[]) {
 
+  if(argc < 3) {
+    std::cerr << "FFTTiming <number-of-trials> <vector-size>\n";
+    exit(-1);
+  }
   // trials, size 
   int trials = atof(argv[1]);
   int vsize = atof(argv[2]);
@@ -38,9 +42,13 @@ int main(int argc, char * argv[]) {
     in_vecs.push_back(iv);
     out_vecs.push_back(ov);     
   }
-  
+
+  auto config_start = std::chrono::high_resolution_clock::now();
   // now create the FFT object
-  SoDa::FFT fft(vsize);
+  SoDa::FFT fft(vsize, FFTW_EXHAUSTIVE);
+  auto config_end = std::chrono::high_resolution_clock::now();
+  
+  auto config_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(config_end - config_start).count();
 
   // do the time trial
   auto start = std::chrono::high_resolution_clock::now();
@@ -61,13 +69,15 @@ int main(int argc, char * argv[]) {
   double points = 2.0 * ((double) vsize) * ((double) trials);
   double elapsed = ns;
 
-  //  std::cout << "ns " << ns << " elapsed " << elapsed << " sum = " << sum << "\n";
+  std::cout << "# Vector_Size Config_Time Num_Trials Elapsed_Time Time_per_point\n";
+  
   // vsize, trials, elapsed, time-per-pt
-  std::cout << SoDa::Format("%0 %1 %2 %3\n")
+  std::cout << SoDa::Format("%0 %4 %1 %2 %3\n")
     .addI(vsize)
     .addI(trials)
     .addF(elapsed * 1e-9, 'e')
-    .addF((elapsed / points) * 1e-9, 'e');
+    .addF((elapsed / points) * 1e-9, 'e')
+    .addF(config_ns * 1e-9, 'e');
   
   
 }

@@ -40,20 +40,16 @@ target_link_directories(FilterExample PUBLIC ${LIB_DIRS})
 target_link_libraries(FilterExample ${LIBS})
 target_include_directories(FilterExample PUBLIC ${INCLUDE_DIRS})
 
-add_executable(FIRFilterTest FIRFilterTest.cxx)
-target_link_directories(FIRFilterTest PUBLIC ${LIB_DIRS})
-target_link_libraries(FIRFilterTest ${LIBS})
-target_include_directories(FIRFilterTest PUBLIC ${INCLUDE_DIRS})
 
 add_executable(FFTTiming FFTTiming.cxx)
 target_link_directories(FFTTiming PUBLIC ${LIB_DIRS})
 target_link_libraries(FFTTiming ${LIBS})
 target_include_directories(FFTTiming PUBLIC ${INCLUDE_DIRS})
 
-add_executable(ReSamplerTest ReSamplerTest.cxx)
-target_link_directories(ReSamplerTest PUBLIC ${LIB_DIRS})
-target_link_libraries(ReSamplerTest ${LIBS})
-target_include_directories(ReSamplerTest PUBLIC ${INCLUDE_DIRS})
+#add_executable(ReSamplerTest ReSamplerTest.cxx)
+#target_link_directories(ReSamplerTest PUBLIC ${LIB_DIRS})
+#target_link_libraries(ReSamplerTest ${LIBS})
+#target_include_directories(ReSamplerTest PUBLIC ${INCLUDE_DIRS})
 
 
 

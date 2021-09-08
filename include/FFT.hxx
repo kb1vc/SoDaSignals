@@ -32,7 +32,7 @@ namespace SoDa {
      * FFTW_MEASURE as to be "just fine."
      * 
      */
-    FFT(size_t N, unsigned int flags = FFTW_ESTIMATE | FFTW_UNALIGNED);
+    FFT(size_t N, unsigned int flags = FFTW_MEASURE | FFTW_UNALIGNED); // FFTW_ESTIMATE | FFTW_UNALIGNED);
     
     ~FFT();
 

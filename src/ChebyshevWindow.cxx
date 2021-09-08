@@ -2,6 +2,8 @@
 #include "FFT.hxx"
 #include <complex>
 #include <iostream>
+#include <SoDa/Format.hxx>
+#include <fstream>
 
 // Borrowed heavily from the scipy signal chebwin source code that was
 // apparently borrowed from the octave source code.
@@ -29,11 +31,11 @@
 
 static float Cheb(int n, float x) {
   float ret; 
-  if(abs(x) > 1.0) {
+  if(fabs(x) > 1.0) {
     float n1 = -1.0;
     if((n % 2) == 0) n1 = 1.0;
     if(x > 1.0) n1 = 1; 
-    ret = n1 * cosh(n * acosh(abs(x)));
+    ret = n1 * cosh(n * acosh(fabs(x)));
   }
   else {
     ret =  cos(n * acos(x));
@@ -63,6 +65,7 @@ void _ChebyshevWindow(std::vector<T> & res, size_t N, float atten) {
   // now do the inverse fft to get us the actual window
   SoDa::FFT fft(N);
   fft.ifft(cw, CW);
+  
   for(int i = 0; i < N; i++) {
     res[i] = cw[i].real() / cw[0].real();
   }
