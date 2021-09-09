@@ -67,7 +67,35 @@ sudo make install
 This will install the libraries in /usr/local/lib or lib64 as appropriate
 and the includes in /usr/local/include/SoDa
 
-It will also write doxygen output that starts at /usr/local/share/sodaformat/doc/html/index.html
+It will also write doxygen output that starts at /usr/local/share/SoDaSignals/
+
+### Installing Without root
+It is possible to install the library in a private directory (without needing root) like this: 
+
+
+```
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${HOME}/my_tools/ ../
+make
+sudo make install
+```
+
+If you've installed SoDaUtils without root or in some non-standard directory like ${HOME}/my_tools you'll need to add this to the cmake command:
+
+```
+cmake -DCMAKE_INSTALL_PREFIX=${HOME}/my_tools/ -DCMAKE_PREFIX_PATH=${HOME}/my_tools ../ 
+```
+
+This should work just fine, but if you do, then any build that *uses*
+SoDaSignals needs to add this to its cmake
+
+```
+cmake -DCMAKE_PREFIX_PATH=${HOME}/my_tools ../
+```
+ 
+That will tell cmake to look in your directory for the relevant cmake
+files that describe where to find the libraries and headers.
 
 ### Installing Without root
 It is possible to install the library in a private directory (without needing root) like this: 

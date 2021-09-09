@@ -28,6 +28,7 @@
 
 set(SoDaSignals_FOUND TRUE)
 
+INCLUDE(FindPackageHandleStandardArgs)
 find_package(PkgConfig)
 
 set(SoDaSignals_INCLUDE_HINTS)
@@ -53,8 +54,41 @@ find_library(SoDaSignals_pre_LIBRARIES
        /opt/local/lib
 )
 
-FIND_PACKAGE(FFTW3 REQUIRED)
+# We need to use our own FFTW finder because the FFTW installation is
+# broken on some Fedora releases... (It is missing a CMake Config file.)
 
+# The Fedora (34?) FFTW package is missing some CMake support.
+# In particular the FFTW3LibraryDepends.cmake file is missing.
+# There are various hacks to fix this, but I think we'll just bypass
+# the whole thing. 
+
+FIND_PATH(
+    FFTW3_INCLUDE_DIRS
+    NAMES fftw3.h 
+    HINTS $ENV{FFTW3_DIR}/include
+    PATHS /usr/local/include
+          /usr/include
+)
+
+FIND_LIBRARY(
+    FFTW3F_libs
+    NAMES fftw3f libfftw3f
+    HINTS $ENV{FFTW3_DIR}/lib
+    PATHS /usr/local/lib
+          /usr/lib
+          /usr/lib64
+)
+
+FIND_LIBRARY(
+    FFTW3_libs
+    NAMES fftw3 libfftw3
+    HINTS $ENV{FFTW3_DIR}/lib
+    PATHS /usr/local/lib
+          /usr/lib
+          /usr/lib64
+)
+
+set(FFTW3_LIBRARIES ${FFTW3_libs} ${FFTW3F_libs})
 
 SET(SoDaSignals_INCLUDE_DIRS ${SoDaSignals_pre_INCLUDE_DIRS})
 SET(SoDaSignals_LIBRARIES ${SoDaSignals_pre_LIBRARIES})

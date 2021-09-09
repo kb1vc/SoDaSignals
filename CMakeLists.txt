@@ -101,6 +101,6 @@ IF(DOXYGEN_FOUND)
     COMMENT "Generating API documentation with Doxygen" VERBATIM
     )
 
-  INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/sodasignals/doc)
+  INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc/SoDaSignals)
 ENDIF()
 
