@@ -35,7 +35,7 @@ set(SoDaSignals_LIB_HINTS)
 
 
 
-find_path(SoDaSignals_INCLUDE_DIRS
+find_path(SoDaSignals_pre_INCLUDE_DIRS
   NAMES SoDa/Filter.hxx
   HINTS ${SoDaSignals_INCLUDE_HINTS}
   PATHS /usr/local/include
@@ -43,7 +43,7 @@ find_path(SoDaSignals_INCLUDE_DIRS
 	/opt/local/include
 )
 
-find_library(SoDaSignals_LIBRARIES
+find_library(SoDaSignals_pre_LIBRARIES
   NAMES sodasignals
   HINTS ${SoDaSignals_LIB_HINTS}
   PATHS /usr/local/lib
@@ -53,13 +53,20 @@ find_library(SoDaSignals_LIBRARIES
        /opt/local/lib
 )
 
-if(SoDaSignals_INCLUDE_DIRS AND SoDaSignals_LIBRARIES)
+FIND_PACKAGE(FFTW3 REQUIRED)
+
+
+SET(SoDaSignals_INCLUDE_DIRS ${SoDaSignals_pre_INCLUDE_DIRS})
+SET(SoDaSignals_LIBRARIES ${SoDaSignals_pre_LIBRARIES})
+
+LIST(APPEND SoDaSignals_INCLUDE_DIRS ${FFTW3_INCLUDE_DIRS})
+LIST(APPEND SoDaSignals_LIBRARIES ${FFTW3_LIBRARIES})
+
+if(SoDaSignals_pre_INCLUDE_DIRS AND SoDaSignals_pre_LIBRARIES)
   include(FindPackageHandleStandardArgs)
   FIND_PACKAGE_HANDLE_STANDARD_ARGS(SoDaSignals DEFAULT_MSG SoDaSignals_LIBRARIES SoDaSignals_INCLUDE_DIRS)
   mark_as_advanced(SoDaSignals_LIBRARIES SoDaSignals_INCLUDE_DIRS)
-elseif(SoDaSignals_FIND_REQUIRED)
-  message("SoDaSignals_INCLUDE_DIRS = ${SoDaSignals_INCLUDE_DIRS}")
-  message("SoDaSignals_LIBRARIES = ${SoDaSignals_LIBRARIES}")  
+else()
   message(FATAL_ERROR "SoDaSignals lib is required, but not found.")
 endif()
 

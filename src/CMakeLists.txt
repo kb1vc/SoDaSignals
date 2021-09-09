@@ -4,18 +4,6 @@ set(SIGNALS_SRCS
 	)
 
 
-FIND_PACKAGE(FFTW3 REQUIRED)
-FIND_PACKAGE(FFTW3F REQUIRED)
-
-set(DEP_LIBS ${FFTW3_LIBRARIES})
-list(APPEND DEP_LIBS ${FFTW3F_LIBRARIES})
-
-set(DEP_INCLS ${FFTW3_INCLUDE_DIRS})
-
-set(SIGLIBS
-  ${FFTW3_LIBRARY_DIRS}
-  ${FFTW3F_LIBRARY_DIRS})
-
 add_library(sodasignals SHARED ${SIGNALS_SRCS})
 target_include_directories(sodasignals PUBLIC ${DEP_INCLS})
 target_link_libraries(sodasignals ${DEP_LIBS})
