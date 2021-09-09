@@ -31,6 +31,20 @@ dnf install fftw-devel
 Optionally, to get nice documentation in html form
 ```
 dnf install doxygen
+
+### For Unbuntu 21
+
+```
+apt install g++
+apt install git
+apt install cmake
+apt install fftw3-dev
+```
+
+And the optional doxygen kit: 
+```
+apt install doxygen
+```
 ```
 
 SoDaSignals also requires the SoDaUtils library. It will attempt to
