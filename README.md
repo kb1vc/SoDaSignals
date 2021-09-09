@@ -12,12 +12,30 @@
 
 SoDaSignals requires very little in terms of libraries and other
 stuff.
+  . git
+  . cmake
   . FFTW3: both double and single precision versions. If your
   distribution distinguishes between "normal" kits and "devel" kits,
   install the "devel" package. 
   . C++: Any version supporting the C++11 standard
-
+  
 and that's it.
+
+For Fedora 34: 
+```
+dnf install gcc-c++ n
+dnf install git cmake
+dnf install fftw-devel
+```
+
+Optionally, to get nice documentation in html form
+```
+dnf install doxygen
+```
+
+SoDaSignals also requires the SoDaUtils library. It will attempt to
+build the library itself and install it in the same destination
+directory.
 
 ## Installing
 
@@ -33,9 +51,31 @@ sudo make install
 ```
 
 This will install the libraries in /usr/local/lib or lib64 as appropriate
-and the include in /usr/local/include/SoDaFormat/Format.hxx
+and the includes in /usr/local/include/SoDa
 
 It will also write doxygen output that starts at /usr/local/share/sodaformat/doc/html/index.html
+
+### Installing Without root
+It is possible to install the library in a private directory (without needing root) like this: 
+
+
+```
+mkdir build
+cd build
+cmake -DCMAKE_INSTALL_PREFIX=${HOME}/my_tools/
+make
+sudo make install
+```
+
+This should work just fine, but if you do, then any build that *uses*
+SoDaSignals needs to add this to its cmake
+
+```
+cmake -DCMAKE_PATH_PREFIX=${HOME}/my_tools
+```
+
+That will tell cmake to look in your directory for the relevant cmake
+files that describe where to find the libraries and headers.
 
 ### MacOS
 
