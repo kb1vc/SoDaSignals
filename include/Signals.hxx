@@ -52,10 +52,26 @@
  * are replete with discussions of IIR and FIR filters, Z transforms, Parks-McClellan, 
  * and all that stuff.  
  *
- * Anybody attempting to learn digital signal processing should implement 
- * a few filters on their own.  However, the SoDa::Filter class can provide
- * a reference or provide a check on a student's experiment. 
+ * Anybody attempting to learn digital signal processing should
+ * implement a few filters on their own.  However, the SoDa::Filter
+ * class can provide a reference or provide a check on a student's
+ * experiment.  Most importantly, it operates on continuous streams --
+ * using overlap-and-save -- so the library has already taken care of
+ * a lot of bookkeeping-that-doesn't-teach-you-much for you.
  * 
+ * \section ReSampling The SoDa::ReSampler Class
+ *
+ * Samples come in at a rate that is determined by the radio at the
+ * other end, bandwidth over the wire, channel requirements, and all
+ * that jazz.  Sometimes that rate isn't what we need. Few radios
+ * support sample rates of 48 kS/s -- a fairly common sample rate for
+ * audio widgets.  We may even want to do some processing before
+ * writing a signal stream to a disk.  That's where the ReSampler
+ * class comes in.
+ *
+ * Like SoDa::Filter, SoDa::ReSampler operates on a continuous signal
+ * stream. Otherwise it would be pretty useless. 
+ *
  * \section Windows 
  * 
  * At this writing, there is but one window function in the library:
@@ -74,11 +90,11 @@
  *
  * \section SoDa
  * 
- * SoDa is a set of classes, libraries, (and one application) that have
- * been developed as a hobby.  They are not meant for production (though
- * the license is permissive here) as they are a running chronicle of 
- * my own -- sometimes slow -- process of learning the knooks and krannies
- * of DSP. 
+ * SoDa is a namespace around a set of classes, libraries, (and one
+ * application) that have been developed as a hobby.  They are not
+ * meant for production (though the license is permissive here) as
+ * they are a running chronicle of my own -- sometimes slow -- process
+ * of learning the knooks and krannies of DSP.
  * 
  * SoDaSignals is this collection of basic blocks. 
  * 
@@ -88,9 +104,10 @@
  * Much of the code in SoDaSignals will eventually replace components in SoDaRadio. 
  * (Especially the really grody and barely competent implementation of the filters.)
  *
- * SoDa::Format is more generally useful: it is a package for constructing 
- * formatted strings that show floating point numbers the way God intended: in 
- * engineering notation where the power-of-ten exponent is a multiple of 3. 
+ * SoDa::Format (in the SoDaUtils package) is generally useful:
+ * it is a package for constructing formatted strings that show
+ * floating point numbers the way God intended: in engineering
+ * notation where the power-of-ten exponent is a multiple of 3.
  * 
  * All SoDa components are FOSS.  See the associated licenses.
  * 

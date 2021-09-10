@@ -31,6 +31,7 @@ dnf install fftw-devel
 Optionally, to get nice documentation in html form
 ```
 dnf install doxygen
+```
 
 ### For Unbuntu 21
 
