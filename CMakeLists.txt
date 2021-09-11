@@ -8,8 +8,10 @@ ENDIF()
 
 PROJECT(SoDaSignals)
 
+INCLUDE(GNUInstallDirs)
+
 SET(SoDaSignals_VERSION_MAJOR 1)
-SET(SoDaSignals_VERSION_MINOR 1)
+SET(SoDaSignals_VERSION_MINOR 2)
 SET(SoDaSignals_VERSION_PATCH 0)
 SET(SoDaSignals_VERSION "${SoDaSignals_VERSION_MAJOR}.${SoDaSignals_VERSION_MINOR}.${SoDaSignals_VERSION_PATCH}")
 
@@ -87,7 +89,6 @@ list(APPEND DEP_INCLS ${SoDaUtils_INCLUDE_DIRS})
 set(SWIG_ENABLED 0)
 
 # get the right directory name/forms
-INCLUDE(GNUInstallDirs)
 
 ADD_SUBDIRECTORY(src)
 ADD_SUBDIRECTORY(include)
@@ -104,8 +105,10 @@ IF(DOXYGEN_FOUND)
     COMMENT "Generating API documentation with Doxygen" VERBATIM
     )
 
-  INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/doc/SoDaSignals)
+  INSTALL(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/html DESTINATION share/SoDaSignals/doc)
 ENDIF()
+
+INSTALL(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/examples/ DESTINATION share/SoDaSignals/examples)
 
 INCLUDE(cmake/BuildPackage.cmake)
 
