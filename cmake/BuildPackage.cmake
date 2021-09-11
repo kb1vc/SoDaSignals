@@ -3,6 +3,8 @@
 IF( EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake" )
   include( InstallRequiredSystemLibraries )
 
+  set(CPACK_RPM_EXCLUDE_FROM_AUTO_FILELIST_ADDITION ${CMAKE_INSTALL_LIBDIR}/cmake)
+  
   set( CPACK_SET_DESTDIR "off" )
   set( CPACK_PACKAGING_INSTALL_PREFIX "${install_root}" )
   set( CPACK_GENERATOR "DEB;RPM" )
