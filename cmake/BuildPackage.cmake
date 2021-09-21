@@ -5,7 +5,18 @@ IF( EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake" )
 
   set( CPACK_SET_DESTDIR "off" )
   set( CPACK_PACKAGING_INSTALL_PREFIX "${install_root}" )
-  set( CPACK_GENERATOR "DEB;RPM" )
+
+  set( CPACK_GENERATOR "" )
+  IF(BUILD_RPM)
+    list(APPEND CPACK_GENERATOR "RPM")
+  ENDIF()
+  IF(BUILD_DEB)
+    list(APPEND CPACK_GENERATOR "DEB")
+  ENDIF()
+
+  if(PACKAGE_SYSTEM_NAME)
+    set(TARGET_SYSNAME "_${PACKAGE_SYSTEM_NAME}")
+  endif()
  
   set( CPACK_PACKAGE_DESCRIPTION "SoDa package for basic signal processing functions (filters, resamplers, fft...)" )
   set( CPACK_PACKAGE_DESCRIPTION_SUMMARY "SoDa Signal Processing" )
@@ -15,12 +26,12 @@ IF( EXISTS "${CMAKE_ROOT}/Modules/CPack.cmake" )
   set( CPACK_PACKAGE_VERSION_MINOR "${SoDaSignals_VERSION_MINOR}")
   set( CPACK_PACKAGE_VERSION_PATCH "${SoDaSignals_VERSION_PATCH}")
   set( CPACK_PACKAGE_FILE_NAME
-    "${CMAKE_PROJECT_NAME}_${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}${spoiled_str}" )
+    "${CMAKE_PROJECT_NAME}_${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}${TARGET_SYSNAME}${spoiled_str}" )
   set( CPACK_SOURCE_PACKAGE_FILE_NAME
     "vric${CMAKE_PROJECT_NAME}_${CPACK_PACKAGE_VERSION_MAJOR}.${CPACK_PACKAGE_VERSION_MINOR}.${CPACK_PACKAGE_VERSION_PATCH}" )
  
   # omit if not required
-  set( CPACK_DEBIAN_PACKAGE_DEPENDS "g++ >= 5.0.0, sodautils, fftw3-dev")
+  set( CPACK_DEBIAN_PACKAGE_DEPENDS "sodautils, fftw3-dev")
   set( CPACK_RPM_PACKAGE_REQUIRES "gcc-g++ >= 5.0.0, sodautils, fftw-devel")
  
   set( CPACK_DEBIAN_PACKAGE_PRIORITY "optional" )

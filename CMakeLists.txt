@@ -110,5 +110,6 @@ ENDIF()
 
 INSTALL(DIRECTORY ${CMAKE_CURRENT_LIST_DIR}/examples/ DESTINATION share/SoDaSignals/examples)
 
-INCLUDE(cmake/BuildPackage.cmake)
-
+IF(BUILD_RPM OR BUILD_DEB)
+  INCLUDE(cmake/BuildPackage.cmake)
+ENDIF()
