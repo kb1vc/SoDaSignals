@@ -79,7 +79,6 @@ int main(int argc, char * argv[]) {
 
       std::cerr << "Resampling\n";
 
-      std::cerr << " The input vector is getting fiddled with in some odd way. \n";
       resamp.applyCont(out, in);
 
       std::cerr << "Doing in/out xforms\n";
