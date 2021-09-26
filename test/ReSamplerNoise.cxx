@@ -1,9 +1,11 @@
 #include <ReSampler.hxx>
 #include <iostream>
 #include <fstream>
+#include <random>
 #include <cmath>
-#include <SoDa/Options.hxx>
 #include <SoDa/Format.hxx>
+#include <SoDa/Options.hxx>
+
 
 #define TEST_DTYPE float
 
@@ -32,15 +34,16 @@ int main(int argc, char * argv[]) {
     // build an input vector of 250 elements.
     // We're going to resample it to 200.
     std::vector<std::complex<TEST_DTYPE>> in(inbuflen);
-    std::vector<std::complex<TEST_DTYPE>> out(in.size() * interp / decimate);     
-
-
-    // put something in at 0.2 (f_nyquist / 2)
-
-
-    std::ofstream inf("rs_in.dat");
+    std::vector<std::complex<TEST_DTYPE>> out(in.size() * interp / decimate);
+    
     std::ofstream outf("rs_out.dat");
+    std::ofstream inf("rs_in.dat");
 
+    // random generator
+    std::random_device rd; // random device for seed
+    std::mt19937 mt(rd()); // setup seed
+    std::uniform_real_distribution<float> dist(-1.0, 1.0);
+    
     std::cerr << "Building FFT\n";
     SoDa::FFT inxform(in.size());    
     std::vector<std::complex<TEST_DTYPE>> in_fft(in.size());
@@ -57,24 +60,10 @@ int main(int argc, char * argv[]) {
     int ko = 0;
 
     std::cerr << "Creating sine\n";
-    int num_trials = 2;
-    int num_freqs = 8;
-    std::vector<TEST_DTYPE> ang(num_freqs);
-    std::vector<TEST_DTYPE> ang_inc(num_freqs);    
-    for(int i = 0; i < num_freqs; i++) {
-      ang[i] = 0.0;
-      ang_inc[i] = (1.0 + float(i) * 1.1) * 2 * M_PI / 20.0;
-      if (i % 2) ang_inc[i] = -ang_inc[i];
-    }
-    
+    int num_trials = 3;
     for(int tr = 0; tr < num_trials; tr++) {
       for(int i = 0; i < in.size(); i++) {
-	in[i] = 0.0;	
-	for(int f = 0; f < num_freqs; f++) {
-	  in[i] = in[i] + std::complex<TEST_DTYPE>(cos(ang[f]), sin(ang[f]));
-	  ang[f] = ang[f] + ang_inc[f];
-	  ang[f] = (ang[f] > M_PI) ? (ang[f] - 2.0 * M_PI) : ang[f]; 
-	}
+	in[i] = std::complex<float>(dist(mt), dist(mt));
       }
 
       std::cerr << "Resampling\n";

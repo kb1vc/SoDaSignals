@@ -7,6 +7,11 @@ target_link_libraries(ReSamplerTest sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(ReSamplerTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(ReSamplerTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 
+add_executable(ReSamplerNoise ReSamplerNoise.cxx)
+target_link_libraries(ReSamplerNoise sodasignals ${SoDaUtils_LIBRARIES})
+target_link_directories(ReSamplerNoise PUBLIC ${SoDaUtils_LIBRARY_DIRS})
+target_include_directories(ReSamplerNoise PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
+
 
 add_executable(FilterTest FilterTest.cxx)
 target_link_libraries(FilterTest sodasignals ${SoDaUtils_LIBRARIES})
