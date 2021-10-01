@@ -4,7 +4,7 @@ set(SIGNALS_SRCS
 	)
 
 
-add_library(sodasignals SHARED ${SIGNALS_SRCS})
+add_library(sodasignals STATIC ${SIGNALS_SRCS})
 target_include_directories(sodasignals PUBLIC ${DEP_INCLS})
 target_link_libraries(sodasignals ${DEP_LIBS})
 target_link_directories(sodasignals PUBLIC ${FFTW3_LIBRARY_DIRS} ${FFTW3F_LIBRARY_DIRS})
