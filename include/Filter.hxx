@@ -315,9 +315,10 @@ namespace SoDa {
       }
     }
 
-
+    std::pair<T,T> getFilterEdges() {
+      return std::pair<T,T>(low_freq, high_freq); 
+    }
     
-
     unsigned int getOverlapLen() { return overlap_len; }
     
     unsigned int getSaveBufLen() { return saved_idft.size(); }
@@ -357,9 +358,6 @@ namespace SoDa {
       return best_so_far; 
     }
     
-    std::pair<T,T> getFilterEdges() {
-      return std::pair<T,T>(low_freq, high_freq); 
-    }
 
   protected:
 	
