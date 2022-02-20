@@ -1,7 +1,8 @@
-FIND_PACKAGE(SoDaUtils REQUIRED QUIET)
+FIND_PACKAGE(SoDaUtils  QUIET)
+
 
 add_executable(CircularBufferTest CircularBufferTest.cxx)
-
+if(SoDaUtils_FOUND) 
 add_executable(ReSamplerTest ReSamplerTest.cxx)
 target_link_libraries(ReSamplerTest sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(ReSamplerTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
@@ -17,7 +18,6 @@ add_executable(FilterTest FilterTest.cxx)
 target_link_libraries(FilterTest sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(FilterTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(FilterTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
-
 
 add_executable(FFTFilterTest FFTFilterTest.cxx)
 target_link_libraries(FFTFilterTest sodasignals ${SoDaUtils_LIBRARIES})
@@ -37,3 +37,4 @@ add_executable(ReSamplerSweep ReSamplerSweep.cxx)
 target_link_libraries(ReSamplerSweep sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(ReSamplerSweep PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(ReSamplerSweep PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
+ENDIF()

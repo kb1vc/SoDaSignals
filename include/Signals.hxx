@@ -104,11 +104,6 @@
  * Much of the code in SoDaSignals will eventually replace components in SoDaRadio. 
  * (Especially the really grody and barely competent implementation of the filters.)
  *
- * SoDa::Format (in the SoDaUtils package) is generally useful:
- * it is a package for constructing formatted strings that show
- * floating point numbers the way God intended: in engineering
- * notation where the power-of-ten exponent is a multiple of 3.
- * 
  * All SoDa components are FOSS.  See the associated licenses.
  * 
  * 

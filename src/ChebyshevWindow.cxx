@@ -2,7 +2,6 @@
 #include "FFT.hxx"
 #include <complex>
 #include <iostream>
-#include <SoDa/Format.hxx>
 #include <fstream>
 
 // Borrowed heavily from the scipy signal chebwin source code that was
