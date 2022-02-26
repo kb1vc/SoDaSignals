@@ -4,6 +4,7 @@
 #include "Filter.hxx"
 #include <iostream>
 #include <memory>
+#include <exception>
 #include <stdexcept>
 #include <iostream>
 #include <sstream>
@@ -13,7 +14,7 @@ namespace SoDa {
   
   class ReSampler_BadBufferSize : public std::runtime_error {
   public:
-    ReSampler_BadBufferSize(int in_blen, int interp, int dec) : std::runtime_error() 
+    ReSampler_BadBufferSize(int in_blen, int interp, int dec) : std::runtime_error("") 
     {
       std::stringstream ss; 
       ss << "SoDa::ReSampler Buffer Length " << in_blen 
@@ -31,7 +32,7 @@ namespace SoDa {
   public:
     ReSampler_MismatchBufferSize(const std::string dir, 
 				 int in_blen, 
-				 int exp_in_blen) : std::runtime_error() {
+				 int exp_in_blen) : std::runtime_error("") {
       std::stringstream ss;
       ss << "SoDa::ReSampler " << dir << "put Buffer Length "
 	 << in_blen << " should have been " << exp_in_blen << "\n"; 

@@ -1,7 +1,8 @@
 #include "FFT.hxx"
 #include <sstream>
 #include <iostream>
-
+#include <exception>
+#include <stdexcept>
 
 SoDa::FFT::FFT(size_t N, unsigned int flags) {
   dim = N;
