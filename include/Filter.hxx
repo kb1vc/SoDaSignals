@@ -61,8 +61,8 @@ namespace SoDa {
      */
     
     Filter(FilterType typ, int _num_taps, T sample_rate, T f1, T f2, 
-	   T transition_width, 
-	   int input_buffer_length)
+	   T transition_width, T stopband_atten,
+	   int input_buffer_length) : low_freq(f1), high_freq(f2)
     {
       initFilter(typ, _num_taps, 
 		 sample_rate, 
@@ -312,9 +312,10 @@ namespace SoDa {
       }
     }
 
-
+    std::pair<T,T> getFilterEdges() {
+      return std::pair<T,T>(low_freq, high_freq); 
+    }
     
-
     unsigned int getOverlapLen() { return overlap_len; }
     
     unsigned int getSaveBufLen() { return saved_idft.size(); }
@@ -370,6 +371,8 @@ namespace SoDa {
     T scale_factor; 
 
     SoDa::FFT * dft_p;
+
+    T low_freq, high_freq;
     
     void writeSDFT(int count, int idx, std::complex<T> & vin, std::complex<T> & vout, std::complex<T> & HI) {
       auto min = vin.real() * vin.real() + vin.imag() * vin.imag();

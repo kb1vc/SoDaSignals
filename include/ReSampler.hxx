@@ -4,35 +4,43 @@
 #include "Filter.hxx"
 #include <iostream>
 #include <memory>
+#include <exception>
 #include <stdexcept>
-#include <SoDa/Format.hxx>
 #include <iostream>
+#include <sstream>
 #include <fstream>
 
 namespace SoDa {
   
   class ReSampler_BadBufferSize : public std::runtime_error {
   public:
-    ReSampler_BadBufferSize(int in_blen, int interp, int dec) :
-      std::runtime_error(SoDa::Format("SoDa::ReSampler Buffer Length %0 can't be rationally resampled as %1/%2\n")
-			 .addI(in_blen)
-			 .addI(interp)
-			 .addI(dec)
-			 .str()) {
+    ReSampler_BadBufferSize(int in_blen, int interp, int dec) : std::runtime_error("") 
+    {
+      std::stringstream ss; 
+      ss << "SoDa::ReSampler Buffer Length " << in_blen 
+	 << " can't be rationally resampled as " 
+	 << interp << "/" << dec << "\n";
+      
+      excstring = ss.str();
     }
+    
+    const char * what() { return excstring.c_str(); }
+    std::string excstring; 
   };
 
   class ReSampler_MismatchBufferSize : std::runtime_error {
   public:
     ReSampler_MismatchBufferSize(const std::string dir, 
 				 int in_blen, 
-				 int exp_in_blen) :
-      std::runtime_error(SoDa::Format("SoDa::ReSampler %0put Buffer Length %1 should have been %2\n")
-			 .addS(dir)
-			 .addI(in_blen)
-			 .addI(exp_in_blen)
-			 .str()) {
+				 int exp_in_blen) : std::runtime_error("") {
+      std::stringstream ss;
+      ss << "SoDa::ReSampler " << dir << "put Buffer Length "
+	 << in_blen << " should have been " << exp_in_blen << "\n"; 
+      excstring = ss.str(); 
     }
+
+    const char* what() { return excstring.c_str(); }
+    std::string excstring; 
   };
   
   template <typename T>

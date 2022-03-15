@@ -2,7 +2,6 @@
 #include "FFT.hxx"
 #include <complex>
 #include <iostream>
-#include <SoDa/Format.hxx>
 #include <fstream>
 
 
