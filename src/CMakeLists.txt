@@ -1,6 +1,6 @@
 set(SIGNALS_SRCS
 	FFT.cxx
-	ChebyshevWindow.cxx
+	Windows.cxx
 	)
 
 
@@ -33,7 +33,7 @@ IF(SWIG_ENABLED)
   #SWIG_ADD_MODULE(SoDaSignals python SoDaSignals.i FFT.cxx)
   SWIG_ADD_LIBRARY(SoDaSignalsPy
     LANGUAGE python 
-    SOURCES SoDaSignals.i FFT.cxx ChebyshevWindow.cxx)
+    SOURCES SoDaSignals.i FFT.cxx Windows.cxx)
   #target_link_directories(SoDaSignalsPy PUBLIC ${FFTW3_LIBRARY_DIRS} ${FFTW3F_LIBRARY_DIRS})
   SWIG_LINK_LIBRARIES(SoDaSignalsPy ${PYTHON_LIBRARIES}  ${DEP_LIBS})
   #SET_PROPERTY(TARGET SoDaSignalsPy PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)

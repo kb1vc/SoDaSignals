@@ -108,7 +108,6 @@ namespace SoDa {
       lpf.initFilter(SoDa::FilterType::BP, 41, 
 		     sample_rate, -freq_corner, freq_corner,
 		     0.1 * freq_corner,
-		     50, 
 		     interpolate_buf_len);
 
 

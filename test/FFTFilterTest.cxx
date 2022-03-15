@@ -69,41 +69,39 @@ double magAtFreq2(double freq, std::vector<std::complex<double>> & ovec, SoDa::F
 
 
 int main() {
-  int sample_rate = 1000; 
-  int num_taps = 128;
+  int sample_rate = 48000;
+  int num_taps = 512;
   double f_sample_rate = ((double) sample_rate);
-  int buf_len = 1000; 
+  int buf_len = 4096; 
   // a bandpass filter from 
   SoDa::Filter<double> filt_LP(SoDa::FilterType::BP, num_taps, 
-		       f_sample_rate, 
-		       0.0, 0.15 * f_sample_rate,
-		       0.0025 * f_sample_rate,
-			       50, buf_len);
+			       f_sample_rate, 
+			       300, 3300,
+			       300,
+			       buf_len);
   
   SoDa::Filter<double> filt_HP(SoDa::FilterType::BP, num_taps, 
 		       f_sample_rate,
-		       0.1 * f_sample_rate, 0.5 * f_sample_rate,
-		       0.0025 * f_sample_rate,
-			       50, buf_len);
+			       300, 800, 
+			       200, 
+			       buf_len);
   
   SoDa::Filter<double> filt_BP(SoDa::FilterType::BP, num_taps,
 		       f_sample_rate,
-		       -0.04 * f_sample_rate, 0.04 * f_sample_rate,
-		       0.01 * f_sample_rate,
-			       50, buf_len);
+			       -12500, 12500, 500, 
+		       buf_len);
   
   SoDa::Filter<double> filt_BS(SoDa::FilterType::BS, num_taps, 
 		       f_sample_rate,
-		       -0.3 * f_sample_rate, -0.25 * f_sample_rate,
-		       0.0025 * f_sample_rate,
-			       50, buf_len);
+			       -6000, -4000, 300, 
+		       buf_len);
   
   SoDa::FFT fft(buf_len);
   
   int buf_mult = 20; 
   for(double freq = -0.5 * f_sample_rate; 
       freq < 0.5 * f_sample_rate; 
-      freq += 0.003125 * f_sample_rate) {
+      freq += 25) {
     // build a vector
     std::vector<std::complex<double>> test(buf_len);
     std::vector<std::complex<double>> out_LP(buf_len);

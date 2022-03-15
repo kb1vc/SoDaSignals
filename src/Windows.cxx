@@ -1,9 +1,40 @@
-#include "ChebyshevWindow.hxx"
+#include "Windows.hxx"
 #include "FFT.hxx"
 #include <complex>
 #include <iostream>
 #include <SoDa/Format.hxx>
 #include <fstream>
+
+
+/*
+BSD 2-Clause License
+
+Copyright (c) 2022 Matt Reilly - kb1vc
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
+
 
 // Borrowed heavily from the scipy signal chebwin source code that was
 // apparently borrowed from the octave source code.
@@ -78,4 +109,52 @@ void SoDa::ChebyshevWindow(std::vector<float> & res, size_t N, float atten) {
 
 void SoDa::ChebyshevWindow(std::vector<double> & res, size_t N, float atten) {
   _ChebyshevWindow<double>(res, N, atten);
+}
+
+//
+// This looks SOOOO much better than the dolph-chebyshev window.  I don't
+// know what I was thinking back then.
+
+
+template <typename T>
+void _HammingHannWindow(std::vector<T> & ret, size_t N, T a0) {
+  ret.resize(N);
+  std::vector<T> res(N);
+  
+  float a1 = 1 - a0;
+
+  T anginc = 2.0 * M_PI / (T(N-1));
+
+  for(int n = 0; n < N; n++) {
+    T ang = (T(n) * anginc);
+    res[n] = a0 - a1 * cos(ang);
+  }
+
+  // do the fft shift
+  for(int i = 0; i < N/2; i++) {
+    ret[i] = res.at(N/2 + i);
+    ret.at(N - i - 1) = res.at(N/2 - i);
+  }
+
+}
+
+
+void SoDa::HammingWindow(std::vector<float> & res, size_t N) {
+  float a0 = 25.0 / 46.0; 
+  _HammingHannWindow<float>(res, N, a0);
+}
+
+void SoDa::HammingWindow(std::vector<double> & res, size_t N) {
+  double a0 = 25.0 / 46.0;   
+  _HammingHannWindow<double>(res, N, 0.54);
+}
+
+void SoDa::HannWindow(std::vector<float> & res, size_t N) {
+  float a0 = 0.5;
+  _HammingHannWindow<float>(res, N, a0);
+}
+
+void SoDa::HannWindow(std::vector<double> & res, size_t N) {
+  double a0 = 0.5;
+  _HammingHannWindow<double>(res, N, 0.54);
 }

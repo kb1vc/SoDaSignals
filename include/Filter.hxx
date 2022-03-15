@@ -3,7 +3,7 @@
 #include <vector>
 #include <functional>
 #include "FFT.hxx"
-#include "ChebyshevWindow.hxx"
+#include "Windows.hxx"
 #include <iostream>
 #include <fstream>
 #include <memory>
@@ -24,7 +24,7 @@
  * 2. Build a frequency domain image of the filter Hp for an M + 1 tap filter over the
  * range -Fs/2 to Fs/2. 
  * 2a. ifft to make hp
- * 2b. window hp with an M + 1 element chebyshev-dolph window. 
+ * 2b. window hp with an M + 1 element hamming window. 
  * 2c. fft to make Hwp
  * 3. Expand Hwp to H -- a Q element filter by stuffing zeros. 
  * 
@@ -57,13 +57,11 @@ namespace SoDa {
      * @param f1 The lower pass/stop band edge in Hz    -0.5 Fs < f1 < 0.5 Fs
      * @param f2 The upper pass/stop band edge in Hz    -0.5 Fs < f2 < 0.5 Fs  f1 < f2
      * @param transition_width  Width of skirts (more or less)
-     * @param stopband_atten Attenuation in dB for frequencies in the stop band, beyond the 
-     * skirts. That's the magic of the Dolph-Chebyshev window. 
      * @param input_buffer_length we fix the input chunk length here. 
      */
     
     Filter(FilterType typ, int _num_taps, T sample_rate, T f1, T f2, 
-	   T transition_width, T stopband_atten,
+	   T transition_width, 
 	   int input_buffer_length)
     {
       initFilter(typ, _num_taps, 
@@ -71,7 +69,6 @@ namespace SoDa {
 		 f1 / sample_rate, 
 		 f2 / sample_rate, 
 		 transition_width / sample_rate, 
-		 stopband_atten, 
 		 input_buffer_length); 
     }
     
@@ -80,7 +77,7 @@ namespace SoDa {
     }
 
     void initFilter(FilterType typ, int min_num_taps, T sample_rate, T f_lo, T f_hi, 
-		    T transition_width, T stopband_atten, 
+		    T transition_width,
 		    int buffer_len, 
 		    std::function<bool(const int)> test = 
 		    [] (int s) -> bool { return true; })
@@ -143,10 +140,10 @@ namespace SoDa {
       std::vector<std::complex<T>> H(num_taps);
 
       // assume a band-pass filter
-      T lo_stop = f_lo - trans;
+      T lo_stop = f_lo - 0.5 * trans;
       T lo_pass = f_lo;
       T hi_pass = f_hi;
-      T hi_stop = f_hi + trans;
+      T hi_stop = f_hi + 0.5 * trans;
 
       T f_incr = 1.0 / num_taps;
 
@@ -194,9 +191,9 @@ namespace SoDa {
       SoDa::FFT fft(flen);
       fft.ifft(hi, Hi);
 
-      // now create a chebyshev-dolph window
+      // now create a hamming window
       std::vector<T> cwin(flen);
-      SoDa::ChebyshevWindow(cwin, flen, 25.0);
+      SoDa::HammingWindow(cwin, flen);
 
       // apply the window
       T sf = 1.0 / T(flen);
