@@ -1,12 +1,11 @@
 #include "FFT.hxx"
 #include <sstream>
 #include <iostream>
-#include <exception>
-#include <stdexcept>
+
 
 SoDa::FFT::FFT(size_t N, unsigned int flags,
 	       int istride, 
-	       int ostride) {
+	       int ostride) : in_stride(istride), out_stride(ostride) {
   dim = N;
 
   w_float.resize(N);
@@ -158,14 +157,14 @@ void SoDa::FFT::initBlackmanHarris(int size)
 
 void SoDa::FFT::checkInOut(size_t outsize, size_t insize) {
   std::stringstream ss; 
-  if((outsize == dim) && (insize == dim)) return;
+  if((outsize / out_stride == dim) && (insize / in_stride == dim)) return;
   
-  if(outsize != dim) {
+  if(outsize / out_stride != dim) {
     ss << "Output vector size " << outsize << " "; 
   }
-  if(insize != dim) {
+  if(insize / in_stride != dim) {
     ss << "Input vector size " << insize << " ";
   }
-  ss << "is not equal to the planned size of " << dim << " elements\n";
+  ss << "is not equal to the planned size of " << dim << " elements with istride " << in_stride << " and out_stride " << out_stride << "\n";
   throw std::runtime_error(ss.str());
 }

@@ -195,5 +195,6 @@ namespace SoDa {
     std::vector<std::complex<double>> s_cdouble; // spectrogram temporary     
     
     size_t dim;
+    size_t in_stride, out_stride; 
   };
 }

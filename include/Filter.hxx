@@ -61,7 +61,7 @@ namespace SoDa {
      */
     
     Filter(FilterType typ, int _num_taps, T sample_rate, T f1, T f2, 
-	   T transition_width, T stopband_atten,
+	   T transition_width, 
 	   int input_buffer_length) : low_freq(f1), high_freq(f2)
     {
       initFilter(typ, _num_taps, 
