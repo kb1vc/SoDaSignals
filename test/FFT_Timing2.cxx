@@ -87,7 +87,7 @@ int main() {
 	for(a7 = a5, i7 = 0; a7 < lim; a7 = a7 * 7, i7++) {
 	  for(a11 = a7, i11 = 0; (a11 < lim) && (i11 < 2); a11 = a11 * 11, i11++) {
 	    for(a13 = a11, i13 = 0; (a13 < lim) && (i13 < 2); a13 = a13 * 13, i13++) {	    
-	      char p2mark = (a7 == a2) ? 'P' : 'X';
+	      char p2mark = (a13 == a2) ? 'P' : 'X';
 	      std::cout << p2mark 
 			<< " " << i2 << " " << i3 << " " 
 			<< i5 << " " << i7 << " "
