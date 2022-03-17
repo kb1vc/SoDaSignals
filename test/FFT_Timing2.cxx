@@ -27,25 +27,6 @@ void timeOperation(SoDa::FFT & fft,
 	    <<  (ti / s) << " per point\n"    ;
 }
 
-void doSingle(std::vector<std::complex<float>> & iv,
-	      std::vector<std::complex<float>> & ov,
-	      int iters) {
-  
-  SoDa::FFT fft(iv.size()); 
-  
-  timeOperation(fft, iv, ov, iters, "Single");
-}
-
-void doInterleaved(std::vector<std::complex<float>> & iv,
-		   std::vector<std::complex<float>> & ov,
-		   int U, 
-		   int iters) {
-  SoDa::FFT fft(iv.size() / U, FFTW_MEASURE | FFTW_UNALIGNED, 
-		U, U);
-
-  timeOperation(fft, iv, ov, iters, "Interleaved");
-}
-
 void doTest(int s) {
   // create the FFT object
   SoDa::FFT fft(s); 

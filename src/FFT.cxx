@@ -1,11 +1,10 @@
 #include "FFT.hxx"
 #include <sstream>
 #include <iostream>
+#include <exception>
+#include <stdexcept>
 
-
-SoDa::FFT::FFT(size_t N, unsigned int flags,
-	       int istride, 
-	       int ostride) : in_stride(istride), out_stride(ostride) {
+SoDa::FFT::FFT(size_t N, unsigned int flags) {
   dim = N;
 
   w_float.resize(N);
@@ -16,54 +15,18 @@ SoDa::FFT::FFT(size_t N, unsigned int flags,
   fftw_set_timelimit(1.0);
   fftwf_set_timelimit(1.0);
 
-  f_dummy_in = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * dim * istride);
-  f_dummy_out = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * dim * ostride);  
-  d_dummy_in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * dim * istride);
-  d_dummy_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * dim * ostride);  
+  f_dummy_in = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * dim);
+  f_dummy_out = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * dim);  
+  d_dummy_in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * dim);
+  d_dummy_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * dim);  
+  
+  fplan_f = fftwf_plan_dft_1d(dim, f_dummy_in, f_dummy_out, FFTW_FORWARD, flags);
 
-  if((istride == 1) && (ostride == 1)) {
-    fplan_f = fftwf_plan_dft_1d(dim, f_dummy_in, f_dummy_out, FFTW_FORWARD, flags);
+  fplan_i = fftwf_plan_dft_1d(dim, f_dummy_in, f_dummy_out, FFTW_BACKWARD, flags);
 
-    fplan_i = fftwf_plan_dft_1d(dim, f_dummy_in, f_dummy_out, FFTW_BACKWARD, flags);
+  dplan_f = fftw_plan_dft_1d(dim, d_dummy_in, d_dummy_out, FFTW_FORWARD, flags);
 
-    dplan_f = fftw_plan_dft_1d(dim, d_dummy_in, d_dummy_out, FFTW_FORWARD, flags);
-
-    dplan_i = fftw_plan_dft_1d(dim, d_dummy_in, d_dummy_out, FFTW_BACKWARD, flags);
-  }
-  else {
-    int np = dim; 
-    int * npp = & np; 
-    // we are planning several parallel DFTs.
-    fplan_f = fftwf_plan_many_dft(1, npp, istride, 
-				  f_dummy_in, npp,
-				  istride, 1, 
-				  f_dummy_out, npp,
-				  ostride, 1,
-				  FFTW_FORWARD, 				  
-				  flags);
-    fplan_i = fftwf_plan_many_dft(1, npp, istride, 
-				  f_dummy_in, npp,
-				  istride, 1, 
-				  f_dummy_out, npp,
-				  ostride, 1,
-				  FFTW_BACKWARD,
-				  flags);
-
-    dplan_f = fftw_plan_many_dft(1, npp, istride, 
-				  d_dummy_in, npp,
-				  istride, 1, 
-				  d_dummy_out, npp,
-				  ostride, 1,
-				  FFTW_FORWARD, 				  
-				  flags);
-    dplan_i = fftw_plan_many_dft(1, npp, istride, 
-				  d_dummy_in, npp,
-				  istride, 1, 
-				  d_dummy_out, npp,
-				  ostride, 1,
-				  FFTW_BACKWARD,
-				  flags);
-  }
+  dplan_i = fftw_plan_dft_1d(dim, d_dummy_in, d_dummy_out, FFTW_BACKWARD, flags);
   
 }
 
@@ -157,14 +120,14 @@ void SoDa::FFT::initBlackmanHarris(int size)
 
 void SoDa::FFT::checkInOut(size_t outsize, size_t insize) {
   std::stringstream ss; 
-  if((outsize / out_stride == dim) && (insize / in_stride == dim)) return;
+  if((outsize == dim) && (insize == dim)) return;
   
-  if(outsize / out_stride != dim) {
+  if(outsize != dim) {
     ss << "Output vector size " << outsize << " "; 
   }
-  if(insize / in_stride != dim) {
+  if(insize != dim) {
     ss << "Input vector size " << insize << " ";
   }
-  ss << "is not equal to the planned size of " << dim << " elements with istride " << in_stride << " and out_stride " << out_stride << "\n";
+  ss << "is not equal to the planned size of " << dim << " elements\n";
   throw std::runtime_error(ss.str());
 }

@@ -39,10 +39,6 @@ target_link_directories(ReSamplerSweep PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(ReSamplerSweep PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 ENDIF()
 
-add_executable(FFT_Timing FFT_Timing.cxx)
-target_link_libraries(FFT_Timing sodasignals)
-target_include_directories(FFT_Timing PUBLIC ${PROJECT_SOURCE_DIR}/include)
-
 add_executable(FFT_Timing2 FFT_Timing2.cxx)
 target_link_libraries(FFT_Timing2 sodasignals)
 target_include_directories(FFT_Timing2 PUBLIC ${PROJECT_SOURCE_DIR}/include)

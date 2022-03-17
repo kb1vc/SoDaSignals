@@ -25,34 +25,15 @@ namespace SoDa {
      * to multiple vectors, we save the initialization and measurement
      * costs associated with FFTW's run-time optimization. 
      * 
-     * There are special configurations for polyphase schemes. To build a polyphase 
-     * interpolator, upsampling by U, create two FFT objects:
-     * 
-     * FFT(N, ..., 1, 1) for the input transform to create an N element FFT x -> X
-     *
-     * then multiply X by the U filters to create U vectors of N/U length
-     * FFT(N/U, ..., U, U) 
-     * Apply IFFT to the Y vector to get the upsampled result. 
-     *
-     * For a polyphase decimator by downsampling rate D, 
-     * 
-     * FFT(N/D, ..., D, D) x[...D] -> X[...D]
-     * Multiply the D X[] by the D filters (this is really a contiguous vector-vector point-by-point mul)
-     * invert D,D -> V[...D] to get v[...D]
-     * SUM V[n * D .. n * (D-1] to get Y[n]
-     *  
      * @param N the number of elements in an input vector passed to fft or ifft
      * @param flags FFTW optimization flags.  FFTW_UNALIGNED is, unless the user
      * knows better, all-but-mandatory.  FFTW_ESTIMATE provides reasonable performance
      * for modern X86 processors, and is sufficiently close to the result from 
      * FFTW_MEASURE as to be "just fine."
-     * @param istride if not 1, process [istride] interleaved vectors on the input
-     * read the mth input vector at inbuf[k * istride + m]
-     * @param ostride if not 1, produce the mth output vector at outbuf[k * ostride + m]
      * 
      */
-    FFT(size_t N, unsigned int flags = FFTW_MEASURE | FFTW_UNALIGNED, // FFTW_ESTIMATE | FFTW_UNALIGNED);
-	int istride = 1, int ostride = 1);
+    FFT(size_t N, unsigned int flags = FFTW_MEASURE | FFTW_UNALIGNED); // FFTW_ESTIMATE | FFTW_UNALIGNED);
+    
     ~FFT();
 
     // We could do this all with templates, but it would be even less readable that way.
@@ -195,6 +176,5 @@ namespace SoDa {
     std::vector<std::complex<double>> s_cdouble; // spectrogram temporary     
     
     size_t dim;
-    size_t in_stride, out_stride; 
   };
 }
