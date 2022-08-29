@@ -9,7 +9,8 @@ ENDIF()
 PROJECT(SoDaSignals)
 
 INCLUDE(GNUInstallDirs)
-
+INCLUDE(CTest)
+  
 SET(SoDaSignals_VERSION_MAJOR 1)
 SET(SoDaSignals_VERSION_MINOR 2)
 SET(SoDaSignals_VERSION_PATCH 0)

@@ -1,132 +1,158 @@
+/*
+  Copyright (c) 2022 Matthew H. Reilly (kb1vc)
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+  Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in
+  the documentation and/or other materials provided with the
+  distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include "FFT.hxx"
-#include <sstream>
-#include <iostream>
 
-
-SoDa::FFT::FFT(size_t N, unsigned int flags) {
-  dim = N;
-
-  w_float.resize(N);
-  w_double.resize(N);
-  s_cfloat.resize(N);
-  s_cdouble.resize(N);
+namespace SoDa {
+  FFT::FFT(unsigned int len) : len(len) {
+    fftwf_set_timelimit(1.0);
+    
+    auto f_dummy_in = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * len);
+    auto f_dummy_out = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * len);  
   
-  fftw_set_timelimit(1.0);
-  fftwf_set_timelimit(1.0);
+    forward_plan = fftwf_plan_dft_1d(len, f_dummy_in, f_dummy_out, 
+				     FFTW_FORWARD, FFTW_MEASURE); // ESTIMATE);
+    backward_plan = fftwf_plan_dft_1d(len, f_dummy_in, f_dummy_out, 
+				      FFTW_BACKWARD, FFTW_MEASURE); // ESTIMATE);
 
-  f_dummy_in = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * dim);
-  f_dummy_out = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * dim);  
-  d_dummy_in = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * dim);
-  d_dummy_out = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * dim);  
-  
-  fplan_f = fftwf_plan_dft_1d(dim, f_dummy_in, f_dummy_out, FFTW_FORWARD, flags);
-
-  fplan_i = fftwf_plan_dft_1d(dim, f_dummy_in, f_dummy_out, FFTW_BACKWARD, flags);
-
-  dplan_f = fftw_plan_dft_1d(dim, d_dummy_in, d_dummy_out, FFTW_FORWARD, flags);
-
-  dplan_i = fftw_plan_dft_1d(dim, d_dummy_in, d_dummy_out, FFTW_BACKWARD, flags);
-  
-}
-
-SoDa::FFT::~FFT() {
-  fftwf_destroy_plan(fplan_f);
-  fftwf_destroy_plan(fplan_i);  
-  fftw_destroy_plan(dplan_f);
-  fftw_destroy_plan(dplan_i);  
-  
-  fftwf_free(f_dummy_in);
-  fftwf_free(f_dummy_out);  
-  fftw_free(d_dummy_in);
-  fftw_free(d_dummy_out);  
-}
-
-bool SoDa::FFT::fft(std::vector<std::complex<float>> & out, std::vector<std::complex<float>> & in)
-{
-  checkInOut(out.size(), in.size());
-  fftwf_execute_dft(fplan_f, (fftwf_complex *) in.data(), (fftwf_complex *) out.data());
-  return true;
-}
-
-bool SoDa::FFT::ifft(std::vector<std::complex<float>> & out, std::vector<std::complex<float>> & in)
-{
-  checkInOut(out.size(), in.size());  
-  fftwf_execute_dft(fplan_i, (fftwf_complex *) in.data(), (fftwf_complex *) out.data());
-  return true;
-}
-
-
-
-bool SoDa::FFT::fft(std::vector<std::complex<double>> & out, std::vector<std::complex<double>> & in)
-{
-  checkInOut(out.size(), in.size());
-  fftw_execute_dft(dplan_f, (fftw_complex *) in.data(), (fftw_complex *) out.data());
-  return true;
-}
-
-bool SoDa::FFT::ifft(std::vector<std::complex<double>> & out, std::vector<std::complex<double>> & in)
-{
-  checkInOut(out.size(), in.size());  
-  fftw_execute_dft(dplan_i, (fftw_complex *) in.data(), (fftw_complex *) out.data());
-  return true;
-}
-
-bool SoDa::FFT::spectrogram(std::vector<std::complex<double>> & out, std::vector<std::complex<double>> & in)
-{
-  checkInOut(out.size(), in.size());  
-  // apply the window
-  for(int i = 0; i < in.size(); i++) {
-    s_cdouble[i] = in[i] * w_double[i];
+    fftwf_free(f_dummy_in);
+    fftwf_free(f_dummy_out);
   }
-  fftw_execute_dft(dplan_f, (fftw_complex *) s_cdouble.data(), (fftw_complex *) out.data());
+    
+  void FFT::fft(std::vector<std::complex<float>> & in, 
+		std::vector<std::complex<float>> & out) {
+    if(in.size() != out.size()) {
+      throw UnmatchedSizes("fft", in.size(), out.size());
+    }
+    if(in.size() != len) {
+      throw BadSize("fft", in.size(), len);
+    }
+    
+    auto in_p = (fftwf_complex*) in.data();
+    auto out_p = (fftwf_complex*) out.data();    
+    bool do_fixup = false;
+    
+    if(fftwf_alignment_of((float*)in_p) != fftwf_alignment_of((float*)out_p)) {
+      // buffers are misaligned.  sigh. make a copy
+      in_p = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * in.size());
+      out_p = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * out.size());
+      for(int i = 0; i < in.size(); i++) {
+	in_p[i][0] = in[i].real();
+	in_p[i][1] = in[i].imag();
+      }
+      do_fixup = true; 
+    }
+    else {
+      in_p = (fftwf_complex*) in.data();
+      out_p = (fftwf_complex*) out.data();      
+    }
+    
+    fftwf_execute_dft(forward_plan, in_p, out_p);
+
+    if(do_fixup) {
+      for(int i = 0; i < out.size(); i++) {
+	out[i] = std::complex<float>(out_p[i][0], out_p[i][1]);
+      }
+      fftwf_free(in_p);
+      fftwf_free(out_p);
+    }
+  }
+
+  void FFT::ifft(std::vector<std::complex<float>> & in, 
+		 std::vector<std::complex<float>> & out) {
+    if(in.size() != out.size()) {
+      throw UnmatchedSizes("fft", in.size(), out.size());
+    }
+    if(in.size() != len) {
+      throw BadSize("fft", in.size(), len);
+    }
+
+    auto in_p = (fftwf_complex*) in.data();
+    auto out_p = (fftwf_complex*) out.data();    
+    bool do_fixup = false;
+    if(fftwf_alignment_of((float*)in_p) != fftwf_alignment_of((float*)out_p)) {
+      // buffers are misaligned.  sigh. make a copy
+      in_p = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * in.size());
+      out_p = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * out.size());
+      for(int i = 0; i < in.size(); i++) {
+	in_p[i][0] = in[i].real();
+	in_p[i][1] = in[i].imag();
+      }
+      do_fixup = true; 
+    }
+    
+    fftwf_execute_dft(backward_plan, in_p, out_p);
+
+    if(do_fixup) {
+      for(int i = 0; i < out.size(); i++) {
+	out[i] = std::complex<float>(out_p[i][0], out_p[i][1]);
+      }
+      fftwf_free(in_p);
+      fftwf_free(out_p);
+    }
+  }
   
-  return true;
-}
-
-bool SoDa::FFT::spectrogram(std::vector<std::complex<float>> & out, std::vector<std::complex<float>> & in)
-{
-  checkInOut(out.size(), in.size());  
-  // apply the window
-  for(int i = 0; i < in.size(); i++) {
-    s_cfloat[i] = in[i] * w_float[i];
+  void FFT::shift(std::vector<std::complex<float>> & in, 
+		  std::vector<std::complex<float>> & out) {
+    // the inputs must be the same size
+    if(in.size() != out.size()) {
+      throw UnmatchedSizes("shift", in.size(), out.size());
+    }
+    if((in.size() % 2) == 0) {
+      // for the even case, ishift and shift are the
+      // same. ishift gets it right....
+      return ishift(in, out);
+    }
+    // take the middle and shift it down
+    // since in and out may be the same vectors, we
+    // make a copy. (Not a big deal.)
+    auto temp = in; 
+    unsigned int mid = (in.size() - 1) / 2;
+    unsigned int mod = in.size();
+    for(int i = 0; i < in.size(); i++) {
+      out[(mid + i) % mod] = temp[i];
+    }
   }
-  fftwf_execute_dft(fplan_f, (fftwf_complex *) s_cfloat.data(), (fftwf_complex *) out.data());
   
-  return true;
-}
-
-
-void SoDa::FFT::initBlackmanHarris(int size)
-{
-  unsigned int i;
-  double a0 = 0.35875;
-  double a1 = 0.48829;
-  double a2 = 0.14128;
-  double a3 = 0.01168;
-
-  w_float.resize(size);
-  w_double.resize(size);
-  float anginc = 2.0 * M_PI / ((float) size - 1);
-  float ang = 0.0; 
-  for(i = 0; i < size; i++) {
-    ang = anginc * ((float) i); 
-    w_float[i] = a0 - a1 * cos(ang) + a2 * cos(2.0 * ang) -a3 * cos(3.0 * ang);
-    w_double[i] = a0 - a1 * cos(ang) + a2 * cos(2.0 * ang) -a3 * cos(3.0 * ang);     
+  void FFT::ishift(std::vector<std::complex<float>> & in, 
+		   std::vector<std::complex<float>> & out) {
+    // the inputs must be the same size
+    if(in.size() != out.size()) {
+      throw UnmatchedSizes("ishift", in.size(), out.size());
+    }
+    // take the middle and shift it down
+    // the two vectors must be distinct.
+    auto temp = in;
+    unsigned int mid = (in.size() + 1) / 2;
+    unsigned int mod = in.size();
+    for(int i = 0; i < in.size(); i++) {
+      out[(mid + i) % mod] = temp[i]; 
+    }
   }
 }
 
-
-
-void SoDa::FFT::checkInOut(size_t outsize, size_t insize) {
-  std::stringstream ss; 
-  if((outsize == dim) && (insize == dim)) return;
-  
-  if(outsize != dim) {
-    ss << "Output vector size " << outsize << " "; 
-  }
-  if(insize != dim) {
-    ss << "Input vector size " << insize << " ";
-  }
-  ss << "is not equal to the planned size of " << dim << " elements\n";
-  throw std::runtime_error(ss.str());
-}

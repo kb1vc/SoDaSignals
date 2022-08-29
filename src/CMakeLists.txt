@@ -1,6 +1,10 @@
 set(SIGNALS_SRCS
 	FFT.cxx
-	ChebyshevWindow.cxx
+	Periodogram.cxx
+	Filter.cxx
+	FilterSpec.cxx
+	ReSampler.cxx
+	NCO.cxx
 	)
 
 
@@ -10,32 +14,6 @@ target_link_libraries(sodasignals ${DEP_LIBS})
 target_link_directories(sodasignals PUBLIC ${FFTW3_LIBRARY_DIRS} ${FFTW3F_LIBRARY_DIRS})
 set(SIGNALS_VERSION "${SoDaSignals_VERSION_MAJOR}.${SoDaSignals_VERSION_MINOR}.${SoDaSignals_VERSION_PATCH}")
 set_target_properties(sodasignals PROPERTIES VERSION ${SIGNALS_VERSION})
-install(TARGETS sodasignals DESTINATION ${LIBDIR})
+install(TARGETS sodasignals DESTINATION ${CMAKE_INSTALL_LIBDIR})
 
-
-IF(SWIG_ENABLED) 
-  # Build python SWIG interface
-  FIND_PACKAGE(SWIG REQUIRED)
-  FIND_PACKAGE(PythonLibs REQUIRED)
-
-  INCLUDE(${SWIG_USE_FILE})
-
-  FIND_PACKAGE(PythonLibs)
-
-  INCLUDE_DIRECTORIES(${PYTHON_INCLUDE_PATH})
-  INCLUDE_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR})
-  INCLUDE_DIRECTORIES(${DEP_INCLS})
-
-  SET(CMAKE_SWIG_FLAGS "")
-
-  SET_SOURCE_FILES_PROPERTIES(SoDaSignals.i PROPERTIES CPLUSPLUS ON)
-  #SET_SOURCE_FILES_PROPERTIES(SoDaSignals.i PROPERTIES SWIG_FLAGS "-includeall")
-  #SWIG_ADD_MODULE(SoDaSignals python SoDaSignals.i FFT.cxx)
-  SWIG_ADD_LIBRARY(SoDaSignalsPy
-    LANGUAGE python 
-    SOURCES SoDaSignals.i FFT.cxx ChebyshevWindow.cxx)
-  #target_link_directories(SoDaSignalsPy PUBLIC ${FFTW3_LIBRARY_DIRS} ${FFTW3F_LIBRARY_DIRS})
-  SWIG_LINK_LIBRARIES(SoDaSignalsPy ${PYTHON_LIBRARIES}  ${DEP_LIBS})
-  #SET_PROPERTY(TARGET SoDaSignalsPy PROPERTY SWIG_USE_TARGET_INCLUDE_DIRECTORIES TRUE)
-ENDIF(SWIG_ENABLED)
 

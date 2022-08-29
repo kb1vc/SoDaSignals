@@ -1,4 +1,4 @@
-#include <SoDa/FFT.hxx>
+#include "../include/FFT.hxx"
 #include <iostream>
 #include <cmath>
 #include <complex>

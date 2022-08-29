@@ -27,55 +27,46 @@
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
-
-///
-///  @file FFT.hxx
-///  @brief General wrapper for fftw3 or whatever DFT widget we're going to use.
-///  Inspired by the numpy fft functions.
-///
-///  @author M. H. Reilly (kb1vc)
-///  @date   July 2022
-///
-
 #include <complex>
 #include <vector>
-#include <fftw3.h>
-#include <stdexcept>
-#include <SoDa/Format.hxx>
 
 namespace SoDa {
-  class FFT {
+  /**
+   * 
+   * @class NCO
+   * Numerically controlled oscillator
+   */
+  class NCO {
   public:
-    class UnmatchedSizes : public std::runtime_error {
-    public:
-      UnmatchedSizes(const std::string & st, unsigned int ins, unsigned int outs) :
-	std::runtime_error(SoDa::Format("Vector arguments to function FFT::%0 must be the same size. In.size = %1  Out.size = %2\n")
-			 .addS(st).addI(ins).addI(outs).str()) { }
-    };
-    class BadSize : public std::runtime_error {
-    public:
-      BadSize(const std::string & st, unsigned int was, unsigned int should_be) :
-	std::runtime_error(SoDa::Format("Vector arguments to function FFT::%0 must %2 but were %1 instead\n")
-			 .addS(st).addI(was).addI(should_be).str()) { }
-    };
+    /**
+     * @brief Constructor
+     *
+     * @param sample_rate sample rate for the output stream
+     * @param frequency frequency of the output stream
+     */
+    NCO(double sample_rate, double frequency);
+
+    void setFreq(double frequency);
+
+    void setAngle(double ang) { cur_angle = ang; }
+    double getAngle() { return cur_angle; }
+    double getAngleIncr() { return ang_incr; }
     
-    FFT(unsigned int len); 
+    enum SumIt { ADD, SET };
     
-    void fft(std::vector<std::complex<float>> & in, 
-	     std::vector<std::complex<float>> & out);
+    void get(std::vector<std::complex<float>> & out, SumIt sum = SET);
 
-    void ifft(std::vector<std::complex<float>> & in, 
-	     std::vector<std::complex<float>> & out);
+    void get(std::vector<std::complex<double>> & out, SumIt sum = SET);     
 
-    void shift(std::vector<std::complex<float>> & in, 
-	     std::vector<std::complex<float>> & out);
-
-    void ishift(std::vector<std::complex<float>> & in, 
-	     std::vector<std::complex<float>> & out);
+    class FreqOutOfBounds : public std::runtime_error {
+    public:
+      FreqOutOfBounds(double fs, double fr);
+    };
     
   protected:
-    fftwf_plan forward_plan, backward_plan;
-    unsigned int len; 
-  };
+    double sample_rate; 
+    double cur_angle;
+    double ang_incr; 
+  }; 
 }
 

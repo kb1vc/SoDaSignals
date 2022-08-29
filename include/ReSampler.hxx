@@ -1,179 +1,163 @@
 #pragma once
+/*
+  Copyright (c) 2022 Matthew H. Reilly (kb1vc)
+  All rights reserved.
+
+  Redistribution and use in source and binary forms, with or without
+  modification, are permitted provided that the following conditions are
+  met:
+
+  Redistributions of source code must retain the above copyright
+  notice, this list of conditions and the following disclaimer.
+  Redistributions in binary form must reproduce the above copyright
+  notice, this list of conditions and the following disclaimer in
+  the documentation and/or other materials provided with the
+  distribution.
+
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+  "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+  LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
+  A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
+  HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+  SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+  LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+  THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+*/
+
 #include <complex>
 #include <vector>
-#include "Filter.hxx"
-#include <iostream>
-#include <memory>
-#include <stdexcept>
+#include <cstdint>
+#include <fftw3.h>
 #include <SoDa/Format.hxx>
-#include <iostream>
-#include <fstream>
+#include "Filter.hxx"
 
 namespace SoDa {
-  
-  class ReSampler_BadBufferSize : public std::runtime_error {
-  public:
-    ReSampler_BadBufferSize(int in_blen, int interp, int dec) :
-      std::runtime_error(SoDa::Format("SoDa::ReSampler Buffer Length %0 can't be rationally resampled as %1/%2\n")
-			 .addI(in_blen)
-			 .addI(interp)
-			 .addI(dec)
-			 .str()) {
-    }
-  };
-
-  class ReSampler_MismatchBufferSize : std::runtime_error {
-  public:
-    ReSampler_MismatchBufferSize(const std::string dir, 
-				 int in_blen, 
-				 int exp_in_blen) :
-      std::runtime_error(SoDa::Format("SoDa::ReSampler %0put Buffer Length %1 should have been %2\n")
-			 .addS(dir)
-			 .addI(in_blen)
-			 .addI(exp_in_blen)
-			 .str()) {
-    }
-  };
-  
-  template <typename T>
+  /**
+   * Rational Resampler
+   *
+   * Create a resampler that upsamples by an interpolation rate and
+   * downsamples by a decimation rate. 
+   */
   class ReSampler {
   public:
-    
     /**
-     * @brief Constructor -- A Rational Resampler in the frequency domain
-     * 
-     * This builds on the overlap-and-save SoDa::Filter
-     * 
-     * @param in_buffer_len length of input buffer to be resampled
-     * @param interpolate interpolation (upsampling) factor
-     * @param decimate decimation (downsampling) factor
-     * @param transition_width width of skirt between output low-pass freq
-     * and output nyquist rate
+     * @brief Constructor
      *
-     * This constructor will throw a "SoDa::Resampler_BadRate" exception
-     * if the up/down ratio can't be implemented in the specified buffer
-     * lengths. 
+     * @param input_sample_rate
+     * @param output_sample_rate
+     * @param time_span how many samples (in time) should a buffer hold? 
      *
-     * ## The Algorithm
+     * The constructor creates the temporary overlap-and-save buffers, 
+     * calculates the sizes of the input and output buffers, 
+     * and builds the anti-aliasing filter. 
+     * 
+     * Note that the user has little influence over the size of the input
+     * buffers (and the output buffer size follows from the ratio of the sample
+     * rates.) These are set by the necessary overlap to provide a continuous
+     * resampler. 
+     * 
+     * The prototype for this resampler can be found in ../jupyter/ReSamplerII.ipynb
+     * 
+     * Here's the general principle: 
+     * We take an input buffer x with a sample rate f1 and want to convert to y with a sample rate f2. 
+     * Assume for the moment we're talking a non-continous resampler. 
+     * 
+     * Our object is to create an FFT image of x and an FFT image of y with exactly the same bucket sizes. 
+     * 
+     * U = Fy / gcd(Fx,Fy)
+     * D = Fx / gcd(Fx,Fy)
+     * 
+     * Then we can create X with an FFT length of (and length of x) some multiple of  D so  Lx = k  * D  That makes each bucket in X
+     * Bx = Fx / Lx wide. Y and y's length will be Ly = Lx * U / D = k * U.  Each bucket in Y will be Fy / Ly wide. 
      *
-     * This is a fairly straightforward filter-based implementation of a 
-     * rational resampler. It takes place in two stages: Upsampling, 
-     * followed by Dowsampling. Most of the heavy lifting is in the frequency
-     * domain.  Interpolate by I, decimate by D
+     * But Fy = Fx * U / D so Bx = Fy / Ly = (Fx * U / D) / (Lx * U / D) = Fx / Lx  
+     * which makes Bx = Lx. 
      * 
-     * Because the resampling is continuous *and* we want to do the heavy
-     * lifting in the frequency domain, we'll use an overlap-and-save 
-     * filter implementation on the upsampled input: 
+     * We pick the smallest k so that k * D * Fx > time_span
      * 
-     * 1. x'[nI] = x[n]
-     * 2. filter x' with cutoff +/- Fc
-     * 3. y[n] = y'[nD]
-     *
-     * The BPF corner frequency Fc is relative to the new upsampled
-     * rate Fs' , so if I > D  Fc =  Fs / (2I)  
-     * if I < D Fc = Fs / (2D)    
+     * So, ignoring the continous case, the scheme is: 
      * 
-     * ## The implementation
+     * X = FFT(LPF(x))
+     * Y[0:ly/2] = X[0:ly/2]
+     * Y[-ly/2:] = X[-ly/2:]
+     * all other Y = 0
      * 
-     * We'll use an overlap-and-save method, building on the components of the
-     * SoDa::Filter class. The LPF filter H[] will be created in the Filter. Its
-     * bandwidth will be set by the Interpolate and Decimate factors so that the
-     * aliasing in both steps is addressed.  The cutoff frequency needs to be
-     * low enough to provide the interpolation smoothing for the upsampling and
-     * the alias elimination for the downsampling. 
+     * y = IFFT(Y)
+     * 
+     * And now for the continous case: 
+     * 
+     * It takes D samples of the input stream to produce the first U
+     * samples of the output stream.  If U and D are relatively prime
+     * (we did that by removing all common factors) then we can't
+     * trust the first U output samples for a stand-alone resample
+     * operation, because we don't have input samples x[-D..0].  But
+     * for the continous case, we do. We can use the last D samples
+     * from the previous round to create the first U samples of this
+     * round. But those last D samples already gave us the last D
+     * samples of the previous round. So we'll discard the first U
+     * samples of output from each round, and save the last D samples
+     * of input from each round. This is exactly like
+     * overlap-and-save, but with a slightly different criteria for
+     * choosing the overlap size.
      */
-    ReSampler(int in_buffer_len, 
-	      int interpolate,
-	      int decimate,
-	      float transition_width) : 
-      in_buffer_len(in_buffer_len), interpolate(interpolate), decimate(decimate)
-    {
-      transition_width = 0.1;
-      int out_buffer_len = (in_buffer_len * interpolate) / decimate;
+    ReSampler(float input_sample_rate,
+	      float output_sample_rate,
+	      float time_span);
 
-      if(((out_buffer_len * decimate) / interpolate) != in_buffer_len) {
-	// then we screwed up and the ratio won't work. 
-	// yes, this is overly restrictive, but why buy agony wholesale?
-	throw SoDa::ReSampler_BadBufferSize(in_buffer_len, interpolate, decimate); 
-      }
+    uint32_t getInputBufferSize();
 
-      float sample_rate = 1;
-      float fq1 = 0.4 / ((float) interpolate); 
-      float fq2 = 0.4 / ((float) decimate);
-
-      float freq_corner = (interpolate > decimate) ? fq1 : fq2; 
-
-      int interpolate_buf_len = in_buffer_len * interpolate;
+    uint32_t getOutputBufferSize();
       
-      lpf.initFilter(SoDa::FilterType::BP, 41, 
-		     sample_rate, -freq_corner, freq_corner,
-		     0.1 * freq_corner,
-		     50, 
-		     interpolate_buf_len);
-
-
-      interp_buffer.resize(interpolate_buf_len); 
-
-      // zero out the interpolate buffer.
-      std::fill(interp_buffer.begin(), interp_buffer.end(), std::complex<T>(0.0,0.0));
-
-      debug_count = 0; 
-    }
-
     /**
-     * @brief Destructor
-     * 
+     * @brief apply the resampler to a buffer of IQ samples.
+     *
+     * @param in input buffer 
+     * @param out output buffer
      */
-    ~ReSampler() {
-    }
+    uint32_t apply(std::vector<std::complex<float>> & in,
+		       std::vector<std::complex<float>> & out);
+    /**
+     * @brief apply the resampler to a buffer of scalar samples.
+     *
+     * @param in input buffer
+     * @param out output buffer
+     */
+    uint32_t apply(float * in,
+		       float * out);
+
+
+    class BadBufferSize : public std::runtime_error {
+    public:
+      BadBufferSize(const std::string & st, uint32_t got_size, uint32_t should_be_size) :
+	std::runtime_error(SoDa::Format("ReSampler::BadBufferSize:: %0 buffer was length %1 should have been %2\n")
+			 .addS(st).addI(got_size).addI(should_be_size).str()) { }
+    };
+
+    uint32_t getU() { return U; }
+    uint32_t getD() { return D; }
     
-    /** 
-     * @brief Apply the Resampler to a buffer stream
-     * 
-     * @param out The output of the filter. 
-     * @param in The input to the filter. 
-     */
-    void applyCont(std::vector<std::complex<T>> & out, std::vector<std::complex<T>> & in) {
-
-      
-      // zero stuff -- note the interp_buffer is pre-zeroed.
-      T scale = interpolate; 
-      for(int i = 0; i < in.size(); i++) {
-	interp_buffer[i * interpolate] = in[i] * scale; 
-      }
-      // do the anti-aliasing filter and decimate on the way out. 
-      lpf.applyCont(out, interp_buffer, decimate);
-
-      debug_count++; 
-      return; 
-    }
-
-      
-
   protected:
-
-    void dump(const std::string & fn, std::vector<std::complex<T>> vec) {
-      std::ofstream out(fn);
-
-      for(auto & v : vec) {
-	T mag = v.real() * v.real() + v.imag() * v.imag();
-	out << v.real() << " " << v.imag() << " " << mag << "\n";
-      }
-
-      out.close();
-    }
+    std::unique_ptr<SoDa::Filter> lpf_p; /// the anti-aliasing low pass filter. 
+    std::unique_ptr<SoDa::FFT> in_fft_p;
+    std::unique_ptr<SoDa::FFT> out_fft_p;    
     
-    ///@{
-    int debug_count;
-    
-    int interpolate, decimate; 
-    int in_buffer_len; 
+    uint32_t U; /// upsample rate
+    uint32_t D; /// decimation rate
 
-    std::vector<std::complex<T>> interp_buffer;
+    float scale_factor;
     
-    SoDa::Filter<T> lpf; // lowpass filter for interp/decimation
-    
-    ///@}
-  };
+    uint32_t Lx; /// input full buffer length
+    uint32_t Ly; /// output full buffer length
 
+    std::vector<std::complex<float>> x, X, y, Y; /// the working buffers
+    
+    uint32_t extract_count; /// how many samples to stuff in the output vector
+
+    uint32_t save_count;   /// we do an overlap-and-save approach here
+    uint32_t discard_count;  /// and we throw out samples at the end. 
+  }; 
 }
+
