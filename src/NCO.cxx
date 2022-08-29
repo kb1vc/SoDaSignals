@@ -1,5 +1,7 @@
 #include "../include/NCO.hxx"
 #include <SoDa/Format.hxx>
+#include <iostream>
+#include <fstream>
 /*
   Copyright (c) 2022 Matthew H. Reilly (kb1vc)
   All rights reserved.
@@ -40,12 +42,14 @@ namespace SoDa {
       throw FreqOutOfBounds(sample_rate, frequency); 
     }
     ang_incr = M_PI * 2.0 * frequency / sample_rate; 
+    std::cout << "NCO set freq " << frequency << " angle incr " << ang_incr << "\n";
   }
   
   template<typename T> 
   void genGet(std::vector<std::complex<T>> & out, 
 	      double & angle, double ang_incr, 
 	      NCO::SumIt sum) {
+    std::ofstream dbg("NCO.dat");    
     for(auto & v : out) {
       if(sum == NCO::ADD) {
 	v += std::complex<T>(cos(angle), sin(angle));
@@ -55,8 +59,12 @@ namespace SoDa {
       }
       angle += ang_incr; 
       if(angle > M_PI) angle = angle - 2.0 * M_PI;
-      if(angle < -M_PI) angle = angle + 2.0 * M_PI; 
+      if(angle < -M_PI) angle = angle + 2.0 * M_PI;
+    
+      dbg << SoDa::Format("%0 %1 %2\n").addF(angle,'e').addF(v.real(),'e').addF(v.imag(), 'e');
+	
     }
+    dbg.close();
   }
   
   void NCO::get(std::vector<std::complex<float>> & out, SumIt sum) {

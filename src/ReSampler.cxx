@@ -165,6 +165,13 @@ namespace SoDa {
       throw BadBufferSize("Output", out.size(), getOutputBufferSize());
     }
 
+
+    if((apcount == 10) || (apcount == 9)) {
+      std::ofstream of(SoDa::Format("RS_in_ready_buff_%0.dat").addI(apcount).str());       for(auto v : in) {
+	of << v.real() << " " << v.imag() << " " << save_count << "\n";
+      }
+      of.close();
+    }
     
     // first do the overlap-and-save thing.
     for(int i = 0; i < save_count; i++) {
@@ -175,19 +182,12 @@ namespace SoDa {
     }
 
     if((apcount == 10) || (apcount == 9)) {
-      std::ofstream of(SoDa::Format("RS_in_ready_buff_%0.dat").addI(apcount).str());       for(auto v : in) {
-	of << v.real() << " " << v.imag() << "\n";
-      }
-      of.close();
-    }
-    if((apcount == 10) || (apcount == 9)) {
       std::ofstream of(SoDa::Format("RS_app_ready_buff_%0.dat").addI(apcount).str()); 
       for(auto v : x) {
-	of << v.real() << " " << v.imag() << "\n";
+	of << v.real() << " " << v.imag() << " " << save_count << "\n";
       }
       of.close();
     }
-    apcount++; 
     
     // now do the FFT
     in_fft_p->fft(x, X);
@@ -207,12 +207,12 @@ namespace SoDa {
     }
     else {
       // we are up sampling. Y gets half of X in the bottom, half in the top.
-      for(int i = 0; i < Lx / 2; i++) {
-	Y[i] = X[i]; 
-	Y[Ly - i - 1] = X[Lx - i - 1];
+      int ystart = Ly / 2 - Lx / 2;
+      for(int i = 0; i < Lx; i++) {
+	Y[ystart + i] = X[i];
       }
     }
-
+    std::cerr << "Now we should apply the LPF\n";
 
     calcMag("Out:  Y ", Y);
     // do the inverse FFT
@@ -224,6 +224,40 @@ namespace SoDa {
       out[i] = y[i + discard_count]; // / scale_factor;
     }
 
+    if((apcount == 10) || (apcount == 9)) {
+      std::ofstream of(SoDa::Format("RS_y_buff_%0.dat").addI(apcount).str()); 
+      for(auto v : y) {
+	of << v.real() << " " << v.imag() << " " <<  discard_count << " " << save_count << "\n";
+      }
+      of.close();
+    }
+
+    if((apcount == 10) || (apcount == 9)) {
+      std::ofstream of(SoDa::Format("RS_X_buff_%0.dat").addI(apcount).str()); 
+      for(auto v : X) {
+	of << v.real() << " " << v.imag() << " " <<  discard_count << " " << save_count << "\n";
+      }
+      of.close();
+    }
+    
+    
+    if((apcount == 10) || (apcount == 9)) {
+      std::ofstream of(SoDa::Format("RS_Y_buff_%0.dat").addI(apcount).str()); 
+      for(auto v : Y) {
+	of << v.real() << " " << v.imag() << " " <<  discard_count << " " << save_count << "\n";
+      }
+      of.close();
+    }
+
+    if((apcount == 10) || (apcount == 9)) {
+      std::ofstream of(SoDa::Format("RS_out_buff_%0.dat").addI(apcount).str()); 
+      for(auto v : out) {
+	of << v.real() << " " << v.imag() << " " <<  discard_count << " " << save_count << "\n";
+      }
+      of.close();
+    }
+    apcount++; 
+    
     calcMag("Norm out: out ", out);
     
     // and that's it!

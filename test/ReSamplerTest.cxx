@@ -212,18 +212,19 @@ bool testRatio(double fs_in, double fs_out) {
   // sweep the frequency. Do 1023 sample frequencies.
   double fd_increment = fs_lim / double(1023);
   
-  for(double freq = -fs_in * 0.5; freq < fs_in * 0.5; freq += fd_increment) {
+  //  for(double freq = -fs_in * 0.5; freq < fs_in * 0.5; freq += fd_increment) {
+  for(double freq = -60.60601; freq < fs_in * 0.5; freq += fd_increment) {    
     bool first_phase_fail = false; // we haven't had a phase failure yet.
+
+    nco.setFreq(freq);
     
-    std::cout << SoDa::Format("testing frequency %0 corner = %1\n")
+    std::cout << SoDa::Format("testing frequency %0 corner = %1 nco pi: %2\n")
       .addF(freq, 'e')
-      .addF(hfs_out, 'e');
+      .addF(hfs_out, 'e')
+      .addF(nco.getAngleIncr(), 'e');
     std::cout.flush();
     
-    nco.setFreq(freq);
-
-
-    
+    if(freq > -12.0) exit(-1);
     pdg.clear();
 
       
@@ -258,12 +259,13 @@ bool testRatio(double fs_in, double fs_out) {
     for(int i = 0; i < num_sweeps; i++) {
       // fill with the tone
       nco.get(in_buffer); 
+      dump2CVec("inbuffer.dat", in_buffer, in_buffer);
       ref_nco.get(ref_out_buffer); 
 
       inpdg.accumulate(in_buffer);
       // resample
       resamp.apply(in_buffer, out_buffer); 
-
+      dump2CVec("inbuffer2.dat", in_buffer, in_buffer);
       if((i == 2) && (band_seg == PASS)) {
 	// sync the reference NCO
 	// find the phase of the -10th element in the output buffer
