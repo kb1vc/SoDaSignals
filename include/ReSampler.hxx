@@ -107,6 +107,8 @@ namespace SoDa {
 	      float output_sample_rate,
 	      float time_span);
 
+    ~ReSampler();
+    
     uint32_t getInputBufferSize();
 
     uint32_t getOutputBufferSize();

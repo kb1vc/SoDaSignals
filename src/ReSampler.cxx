@@ -35,6 +35,18 @@
 #include <fstream>
 
 namespace SoDa {
+typedef std::vector<std::complex<float>> CVec;  
+  static void dumpCVec(const std::string & fn, CVec a) {
+  std::ofstream of(fn); 
+  for(int i = 0; i < a.size(); i++) {
+    of << SoDa::Format("%0 %1 %2\n")
+      .addI(i)
+      .addF(a[i].real(), 'e')
+      .addF(a[i].imag(), 'e');
+  }
+  of.close();
+}
+  
   static void calcMag(const std::string & st, std::vector<std::complex<float>> & ve) {
     float max = 0.0;
     float sumsq = 0.0; 
@@ -144,6 +156,16 @@ namespace SoDa {
   }
 
 
+  ReSampler::~ReSampler() {
+    std::cerr << ".";
+    lpf_p = nullptr;
+    std::cerr << "+";
+    in_fft_p = nullptr; 
+    std::cerr << "/";
+    out_fft_p = nullptr; 
+    std::cerr << "?\n";
+    
+  }
 
   uint32_t ReSampler::getInputBufferSize() {
     return Lx - save_count;
@@ -165,14 +187,6 @@ namespace SoDa {
       throw BadBufferSize("Output", out.size(), getOutputBufferSize());
     }
 
-
-    if((apcount == 10) || (apcount == 9)) {
-      std::ofstream of(SoDa::Format("RS_in_ready_buff_%0.dat").addI(apcount).str());       for(auto v : in) {
-	of << v.real() << " " << v.imag() << " " << save_count << "\n";
-      }
-      of.close();
-    }
-    
     // first do the overlap-and-save thing.
     for(int i = 0; i < save_count; i++) {
       x[i] = x[x.size() - save_count + i];
@@ -181,23 +195,13 @@ namespace SoDa {
       x[i] = in[i - save_count]; 
     }
 
-    if((apcount == 10) || (apcount == 9)) {
-      std::ofstream of(SoDa::Format("RS_app_ready_buff_%0.dat").addI(apcount).str()); 
-      for(auto v : x) {
-	of << v.real() << " " << v.imag() << " " << save_count << "\n";
-      }
-      of.close();
-    }
     
     // now do the FFT
     in_fft_p->fft(x, X);
 
-    calcMag("InFFT: X ", X);
     // apply the filter
     lpf_p->apply(X, X, InOutMode(false,false));
 
-    calcMag("InFFT+lpf: X ", X); 
-    
     // now load the output Y vector
     if(Y.size() < X.size()) {
       for(int i = 0; i < extract_count; i++) {
@@ -209,56 +213,28 @@ namespace SoDa {
       // we are up sampling. Y gets half of X in the bottom, half in the top.
       int ystart = Ly / 2 - Lx / 2;
       for(int i = 0; i < Lx; i++) {
-	Y[ystart + i] = X[i];
+	if(i < Lx/2) {
+	  // we're on the DC and above side.
+	  Y[i] = X[i];
+	}
+	else {
+	  Y[Ly - Lx + i] = X[i];
+	}
+
       }
     }
-    std::cerr << "Now we should apply the LPF\n";
 
-    calcMag("Out:  Y ", Y);
+    //    dumpCVec("Y.dat", Y);    
+
     // do the inverse FFT
     out_fft_p->ifft(Y, y);
-    calcMag("Out: y ", y);
       
     // and copy to the output
     for(int i = 0; i < getOutputBufferSize(); i++) {
       out[i] = y[i + discard_count]; // / scale_factor;
     }
 
-    if((apcount == 10) || (apcount == 9)) {
-      std::ofstream of(SoDa::Format("RS_y_buff_%0.dat").addI(apcount).str()); 
-      for(auto v : y) {
-	of << v.real() << " " << v.imag() << " " <<  discard_count << " " << save_count << "\n";
-      }
-      of.close();
-    }
-
-    if((apcount == 10) || (apcount == 9)) {
-      std::ofstream of(SoDa::Format("RS_X_buff_%0.dat").addI(apcount).str()); 
-      for(auto v : X) {
-	of << v.real() << " " << v.imag() << " " <<  discard_count << " " << save_count << "\n";
-      }
-      of.close();
-    }
-    
-    
-    if((apcount == 10) || (apcount == 9)) {
-      std::ofstream of(SoDa::Format("RS_Y_buff_%0.dat").addI(apcount).str()); 
-      for(auto v : Y) {
-	of << v.real() << " " << v.imag() << " " <<  discard_count << " " << save_count << "\n";
-      }
-      of.close();
-    }
-
-    if((apcount == 10) || (apcount == 9)) {
-      std::ofstream of(SoDa::Format("RS_out_buff_%0.dat").addI(apcount).str()); 
-      for(auto v : out) {
-	of << v.real() << " " << v.imag() << " " <<  discard_count << " " << save_count << "\n";
-      }
-      of.close();
-    }
     apcount++; 
-    
-    calcMag("Norm out: out ", out);
     
     // and that's it!
     return 0;
