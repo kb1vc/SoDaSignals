@@ -32,20 +32,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
-#include <fstream>
 
 namespace SoDa {
-typedef std::vector<std::complex<float>> CVec;  
+  typedef std::vector<std::complex<float>> CVec;  
   static void dumpCVec(const std::string & fn, CVec a) {
-  std::ofstream of(fn); 
-  for(int i = 0; i < a.size(); i++) {
-    of << SoDa::Format("%0 %1 %2\n")
-      .addI(i)
-      .addF(a[i].real(), 'e')
-      .addF(a[i].imag(), 'e');
+
+    for(int i = 0; i < a.size(); i++) {
+      std::cout << SoDa::Format("%0 %1 %2\n")
+	.addI(i)
+	.addF(a.at(i).real(), 'e')
+	.addF(a.at(i).imag(), 'e');
+    }
+    std::cout;
   }
-  of.close();
-}
   
   static void calcMag(const std::string & st, std::vector<std::complex<float>> & ve) {
     float max = 0.0;
@@ -55,7 +54,6 @@ typedef std::vector<std::complex<float>> CVec;
       max = std::max(m, max); 
       sumsq += m * m; 
     }
-    
   }
 
   static uint32_t getGCD(uint32_t a, uint32_t b) {
@@ -67,7 +65,8 @@ typedef std::vector<std::complex<float>> CVec;
       return getGCD(b, a % b);
     }
   }
-  
+
+
   ReSampler::ReSampler(float FS_in,
 		       float FS_out,
 		       float time_span_min) {
@@ -108,10 +107,10 @@ typedef std::vector<std::complex<float>> CVec;
     Lx = k * D;
     Ly = k * U;
 
-     std::cerr << SoDa::Format("ReSampler:: Lx = %0 Ly = %1 k = %2\n")
-       .addI(Lx)
-       .addI(Ly)
-       .addI(k);
+    // std::cerr << SoDa::Format("ReSampler:: Lx = %0 Ly = %1 k = %2\n")
+    //   .addI(Lx)
+    //   .addI(Ly)
+    //   .addI(k);
     // setup the save buffer -- it is at least as long as the filter, and must
     // be a multiple of D.
     int savek = (num_taps + D - 1) / D;
@@ -123,11 +122,6 @@ typedef std::vector<std::complex<float>> CVec;
     // remember our discard
     discard_count = save_count * U / D;
 
-    // now the bucket-copy boundary
-    auto extract_buckets = (Lx < Ly) ? Lx : Ly;
-    extract_count = (extract_buckets + 1) / 2;
-
-    
     lpf_p = std::unique_ptr<SoDa::Filter>(new SoDa::Filter(-cutoff, cutoff, 0.015 * cutoff, FS_in, 
 							   num_taps, Lx));
 
@@ -157,14 +151,6 @@ typedef std::vector<std::complex<float>> CVec;
 
 
   ReSampler::~ReSampler() {
-    std::cerr << ".";
-    lpf_p = nullptr;
-    std::cerr << "+";
-    in_fft_p = nullptr; 
-    std::cerr << "/";
-    out_fft_p = nullptr; 
-    std::cerr << "?\n";
-    
   }
 
   uint32_t ReSampler::getInputBufferSize() {
@@ -189,12 +175,11 @@ typedef std::vector<std::complex<float>> CVec;
 
     // first do the overlap-and-save thing.
     for(int i = 0; i < save_count; i++) {
-      x[i] = x[x.size() - save_count + i];
+      x.at(i) = x.at(x.size() - save_count + i);
     }
     for(int i = save_count; i < Lx; i++) {
-      x[i] = in[i - save_count]; 
+      x.at(i) = in.at(i - save_count); 
     }
-
     
     // now do the FFT
     in_fft_p->fft(x, X);
@@ -204,23 +189,23 @@ typedef std::vector<std::complex<float>> CVec;
 
     // now load the output Y vector
     if(Y.size() < X.size()) {
-      for(int i = 0; i < extract_count; i++) {
-	Y[i] = X[i];
-	Y[extract_count + i] = X[Lx + i - extract_count];
+      auto y_half_count = ((Ly + 1)/ 2);
+      for(int i = 0; i < y_half_count; i++) {
+	Y.at(Ly - 1 - i) = X.at(Lx - 1 - i);	
+	Y.at(i) = X.at(i);
       }
     }
     else {
       // we are up sampling. Y gets half of X in the bottom, half in the top.
-      int ystart = Ly / 2 - Lx / 2;
       for(int i = 0; i < Lx; i++) {
 	if(i < Lx/2) {
 	  // we're on the DC and above side.
-	  Y[i] = X[i];
+	  Y.at(i) = X.at(i);
 	}
 	else {
-	  Y[Ly - Lx + i] = X[i];
+	  auto yi = (Ly - 1) - (Lx - 1) + i;
+	  Y.at((Ly - 1) -(Lx - 1) + i) = X.at(i);
 	}
-
       }
     }
 
@@ -231,7 +216,7 @@ typedef std::vector<std::complex<float>> CVec;
       
     // and copy to the output
     for(int i = 0; i < getOutputBufferSize(); i++) {
-      out[i] = y[i + discard_count]; // / scale_factor;
+      out.at(i) = y.at(i + discard_count); // / scale_factor;
     }
 
     apcount++; 

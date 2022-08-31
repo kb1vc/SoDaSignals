@@ -33,16 +33,13 @@ namespace SoDa {
   Periodogram::Periodogram(unsigned int segment_length, float _alpha) : 
     segment_length(segment_length) {
     alpha = _alpha;     
-    std::cerr << SoDa::Format("incoming alpha = %0\n").addF(alpha, 'e'); 
 
     if(abs(alpha) < 1e-20) {
       alpha = 1.0; 
       beta = 1.0; 
-      std::cerr << "Same\n";
     }
     else {
       beta = 1.0 - alpha;
-      std::cerr << "Not Same\n";
     }
 
     fft_scale = 1.0 / double(segment_length);

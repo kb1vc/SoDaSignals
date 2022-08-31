@@ -120,7 +120,7 @@ namespace SoDa {
      * @param out output buffer
      */
     uint32_t apply(std::vector<std::complex<float>> & in,
-		       std::vector<std::complex<float>> & out);
+		   std::vector<std::complex<float>> & out);
     /**
      * @brief apply the resampler to a buffer of scalar samples.
      *
@@ -128,14 +128,14 @@ namespace SoDa {
      * @param out output buffer
      */
     uint32_t apply(float * in,
-		       float * out);
+		   float * out);
 
 
     class BadBufferSize : public std::runtime_error {
     public:
       BadBufferSize(const std::string & st, uint32_t got_size, uint32_t should_be_size) :
 	std::runtime_error(SoDa::Format("ReSampler::BadBufferSize:: %0 buffer was length %1 should have been %2\n")
-			 .addS(st).addI(got_size).addI(should_be_size).str()) { }
+			   .addS(st).addI(got_size).addI(should_be_size).str()) { }
     };
 
     uint32_t getU() { return U; }
@@ -156,10 +156,9 @@ namespace SoDa {
 
     std::vector<std::complex<float>> x, X, y, Y; /// the working buffers
     
-    uint32_t extract_count; /// how many samples to stuff in the output vector
-
     uint32_t save_count;   /// we do an overlap-and-save approach here
     uint32_t discard_count;  /// and we throw out samples at the end. 
   }; 
+
 }
 

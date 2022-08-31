@@ -192,15 +192,15 @@ bool testRatio(double fs_in, double fs_out) {
   uint32_t pdg_seg_len = 1024; 
   SoDa::Periodogram pdg(pdg_seg_len); 
   
-  std::cout << SoDa::Format("in buf size %0 out buf size %1 fs_in %2 fs_out %3\n")
-    .addI(in_buf_size).addI(out_buf_size)
-    .addF(fs_in, 'e').addF(fs_out, 'e');
+  // std::cout << SoDa::Format("in buf size %0 out buf size %1 fs_in %2 fs_out %3\n")
+  //   .addI(in_buf_size).addI(out_buf_size)
+  //   .addF(fs_in, 'e').addF(fs_out, 'e');
   
   // sweep the frequency. Do 1023 sample frequencies.
 
   double hfs_out = std::min(fs_in,fs_out) * 0.5;
 
-  uint32_t num_sweeps = 5; 
+  uint32_t num_sweeps = 4; 
 
   SoDa::Periodogram inpdg(pdg_seg_len);
   
@@ -211,18 +211,21 @@ bool testRatio(double fs_in, double fs_out) {
 
 
   // sweep the frequency. Do 1023 sample frequencies.
-  double fd_increment = fs_lim / double(1023);
-  
+  double fd_increment = fs_in / double(1253);
+
+  int i = 0; 
   for(double freq = -fs_in * 0.5; freq < fs_in * 0.5; freq += fd_increment) {
     bool first_phase_fail = false; // we haven't had a phase failure yet.
 
+    if(i % 100 == 0) {
+      std::cout << SoDa::Format("testing frequency %0 corner = %1 nco pi: %2\n")
+	.addF(freq, 'e')
+	.addF(hfs_out, 'e')
+	.addF(nco.getAngleIncr(), 'e');
+      std::cout.flush();
+    }
+    i++;
     nco.setFreq(freq);
-    
-    // std::cout << SoDa::Format("testing frequency %0 corner = %1 nco pi: %2\r")
-    //   .addF(freq, 'e')
-    //   .addF(hfs_out, 'e')
-    //   .addF(nco.getAngleIncr(), 'e');
-    // std::cout.flush();
     
     pdg.clear();
 
@@ -232,21 +235,12 @@ bool testRatio(double fs_in, double fs_out) {
     if(fa < 0.9 * hfs_out) {
       // in the passband.
       band_seg = PASS;
-      if(last_band_seg != band_seg) {
-	std::cerr << "\nin PASSBAND\n";
-      }
     }
     else if(fa < hfs_out) {
       band_seg = TRANSITION;
-      if(last_band_seg != band_seg) {
-	std::cerr << "\nin TRANSITION\n";
-      }
     }
     else {
       band_seg = OUT_OF_BAND;
-      if(last_band_seg != band_seg) {
-	std::cerr << "\nin OUT OF BAND\n";
-      }
     }
 
     
@@ -349,14 +343,24 @@ int main(int argc, char * argv[]) {
   typedef std::pair<double, double> dpair; 
   std::list<dpair> test_freqs = {
     dpair(48e3, 8e3),
-    dpair(625e3, 48e3)
+    dpair(625e3, 48e3),
+    dpair(120e3, 48e3),
+    dpair(1.2e6, 48e3),
+    dpair(1.25e6, 48e3),
+    dpair(2.5e6, 48e3)
   };
-  
-  for(auto fp : test_freqs) {
-    std::cerr << SoDa::Format("Test %0 -> %1\n").addF(fp.first, 'e').addF(fp.second, 'e');
-    is_ok = is_ok && testRatio(fp.first, fp.second);
-    std::cerr << SoDa::Format("Test %1 -> %0\n").addF(fp.first, 'e').addF(fp.second, 'e');    
-    is_ok = is_ok && testRatio(fp.second, fp.first);    
+
+  if(cmd.isPresent("fsin") && cmd.isPresent("fsout")) {
+    std::cerr << SoDa::Format("Test %0 -> %1\n").addF(fs_in, 'e').addF(fs_out, 'e');
+    is_ok = is_ok && testRatio(fs_in, fs_out);
+  }
+  else {
+    for(auto fp : test_freqs) {
+      std::cerr << SoDa::Format("Test %0 -> %1\n").addF(fp.first, 'e').addF(fp.second, 'e');
+      is_ok = is_ok && testRatio(fp.first, fp.second);
+      std::cerr << SoDa::Format("Test %1 -> %0\n").addF(fp.first, 'e').addF(fp.second, 'e');    
+      is_ok = is_ok && testRatio(fp.second, fp.first);    
+    }
   }
 
   
