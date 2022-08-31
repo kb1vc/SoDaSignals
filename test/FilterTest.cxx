@@ -8,17 +8,16 @@ int main() {
   int sample_rate = 1000; 
   // a bandpass filter from
   try {
-    int sample_rate = 1000; 
-    int num_taps = 33;
-    int buflen = 400;    
+    int sample_rate = 48000; 
+    int num_taps = 400;
+    int buflen = 10000;    
     double f_sample_rate = ((double) sample_rate);
-    // so frequencies can go from -500 to 500 Hz
+    // so frequencies can go from -24000 to 24000 Hz
     // a bandpass filter from 
     SoDa::Filter<float> filt_LP(SoDa::FilterType::BP, num_taps, 
 				 f_sample_rate, 
 				0.0, 80.0,
 				20.0,
-				50, 
 				buflen);
 
 

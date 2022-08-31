@@ -72,22 +72,6 @@
  * Like SoDa::Filter, SoDa::ReSampler operates on a continuous signal
  * stream. Otherwise it would be pretty useless. 
  *
- * \section Windows 
- * 
- * At this writing, there is but one window function in the library:
- * The Dolph-Chebyshev window.  This was seen as a good choice for a
- * filter-synthesis window (See Lyons "Understading Digital Signal
- * Processing" for a discussion of the "Window Design Method."  For a
- * definitive catalog of windows, see the paper by Fred Harris "On the
- * Use of Windows for Harmonic Analysis With the Discrete Fourier
- * Transform.")
- * 
- * The Dolph-Chebyshev window, is somewhat difficult to implement from
- * the common literature. Both of the above sources were incomplete, especially
- * regarding the definition of the Chebyshev function that is crucial
- * of the window's construction.  See the comments in the sources for 
- * ChebyshevWindow.cxx to get more details. 
- *
  * \section SoDa
  * 
  * SoDa is a namespace around a set of classes, libraries, (and one
@@ -98,17 +82,14 @@
  * 
  * SoDaSignals is this collection of basic blocks. 
  * 
- * SoDaRadio is the first real DSP application I wrote.  It is a software-defined
- * radio application written for the USRP line of SDRs from Ettus Research. I've
- * used it as an "all-mode" amateur radio on bands ranging from 10 MHz to 10 GHz. 
- * Much of the code in SoDaSignals will eventually replace components in SoDaRadio. 
- * (Especially the really grody and barely competent implementation of the filters.)
+ * SoDaRadio is the first real DSP application I wrote.  It is a
+ * software-defined radio application written for the USRP line of
+ * SDRs from Ettus Research. I've used it as an "all-mode" amateur
+ * radio on bands ranging from 10 MHz to 10 GHz.  Much of the code in
+ * SoDaSignals will eventually replace components in SoDaRadio.
+ * (Especially the really grody and barely competent implementation of
+ * the filters.)
  *
- * SoDa::Format (in the SoDaUtils package) is generally useful:
- * it is a package for constructing formatted strings that show
- * floating point numbers the way God intended: in engineering
- * notation where the power-of-ten exponent is a multiple of 3.
- * 
  * All SoDa components are FOSS.  See the associated licenses.
  * 
  * 
