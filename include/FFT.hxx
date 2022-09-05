@@ -60,6 +60,8 @@ namespace SoDa {
     };
     
     FFT(unsigned int len); 
+
+    static uint32_t findGoodSize(uint32_t min_size);
     
     void fft(std::vector<std::complex<float>> & in, 
 	     std::vector<std::complex<float>> & out);

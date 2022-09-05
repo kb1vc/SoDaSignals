@@ -122,8 +122,12 @@ namespace SoDa {
     // remember our discard
     discard_count = save_count * U / D;
 
+    // finally, the save window is one less than the number of taps
+    num_taps = save_count + 1;
+
+    // do we really want to do an LPF?
     lpf_p = std::unique_ptr<SoDa::Filter>(new SoDa::Filter(-cutoff, cutoff, 0.015 * cutoff, FS_in, 
-							   num_taps, Lx));
+							     num_taps, Lx));
 
     
     // create the input and output buffers
@@ -146,7 +150,18 @@ namespace SoDa {
     in_fft_p = std::unique_ptr<SoDa::FFT>(new SoDa::FFT(Lx));
     out_fft_p = std::unique_ptr<SoDa::FFT>(new SoDa::FFT(Ly));    
     
-    // and that's it. 
+    // and that's it.
+    std::cerr << SoDa::Format("lpf taps %0  Lx %1 save_count %2 discard_count %3 inputBufferSize %4 outputBufferSize %5 U %6 D %7 fs_in %8 fs_out %9\n")
+      .addI(num_taps)
+      .addI(Lx)
+      .addI(save_count)
+      .addI(discard_count)
+      .addI(getInputBufferSize())
+      .addI(getOutputBufferSize())
+      .addI(U)
+      .addI(D)
+      .addF(FS_in, 'e')
+      .addF(FS_out, 'e');
   }
 
 
@@ -186,7 +201,7 @@ namespace SoDa {
 
     // apply the filter
     lpf_p->apply(X, X, InOutMode(false,false));
-
+      
     // now load the output Y vector
     if(Y.size() < X.size()) {
       auto y_half_count = ((Ly + 1)/ 2);
@@ -207,6 +222,7 @@ namespace SoDa {
 	  Y.at((Ly - 1) -(Lx - 1) + i) = X.at(i);
 	}
       }
+      //      lpf_p->apply(Y, Y, InOutMode(false,false));      
     }
 
     //    dumpCVec("Y.dat", Y);    

@@ -54,8 +54,8 @@ void fixAngle(float & a) {
   while(a < -M_PI) a = a + 2.0 * M_PI;
 }
 
-void dump2CVec(const std::string & fn, CVec a, CVec b) {
-  std::ofstream of(fn); 
+void dump2CVec(std::ostream & of, CVec a, CVec b) {
+
   for(int i = 0; i < std::min(a.size(), b.size()); i++) {
     of << SoDa::Format("%0 %1 %2 %3 %4\n")
       .addI(i)
@@ -64,19 +64,27 @@ void dump2CVec(const std::string & fn, CVec a, CVec b) {
       .addF(b[i].real(), 'e')
       .addF(b[i].imag(), 'e');
   }
+}
+void dump2CVec(const std::string & fn, CVec a, CVec b) {
+  std::ofstream of(fn);
+  dump2CVec(of, a, b); 
   of.close();
 }
-void dumpVec(const std::string fname, const std::string & msg, FVec v, double Fs, double Fr) {
+
+void dumpVec(std::ostream & os, const std::string & msg, FVec v, double Fs, double Fr) {
   double freq_inc = Fs / double(v.size());
-  std::ofstream of(fname); 
   std::cout << SoDa::Format("%0 Fs = %1 Fr = %2\n")
     .addS(msg)
     .addF(Fs, 'e')
     .addF(Fr, 'e');
 
   for(int i = 0; i < v.size(); i++) {
-    of << SoDa::Format("%0 %1\n").addF(double(i) * freq_inc - Fs / 2, 'e').addF(v[i]);
+    os << SoDa::Format("%0 %1\n").addF(double(i) * freq_inc - Fs / 2, 'e').addF(v[i]);
   }
+}
+void dumpVec(const std::string fname, const std::string & msg, FVec v, double Fs, double Fr) {
+  std::ofstream of(fname); 
+  dumpVec(of, msg, v, Fs, Fr); 
   of.close();
 }
 
@@ -130,7 +138,7 @@ bool checkPDG(SoDa::Periodogram & pdg,
   
   if((seg != OUT_OF_BAND) && 
      (fabs(freq - peak_freq) > bucket_size) &&
-     (20.0 * std::log10(std::fabs(pdg_out[peak_idx])) > -40)) {
+     (20.0 * std::log10(std::fabs(pdg_out[peak_idx])) > ((seg == OUT_OF_BAND) ? -40 : -2))) {
     dumpVec("pdgout_bad_peak.dat", SoDa::Format("Peak freq = %0 freq = %1 bucket_size = %2 mag = %3 dB\n")
 	    .addF(peak_freq,'e').addF(freq, 'e').addF(bucket_size, 'e')
 	    .addF(20 * std::log10(std::abs(pdg_out[peak_idx])), 'e').str(), 
@@ -214,9 +222,10 @@ bool testRatio(double fs_in, double fs_out) {
   double fd_increment = fs_in / double(1253);
 
   int i = 0; 
-  for(double freq = -fs_in * 0.5; freq < fs_in * 0.5; freq += fd_increment) {
+  //  for(double freq = -fs_in * 0.5; freq < fs_in * 0.5; freq += fd_increment) {
+  for(double freq = -fs_in * 0.05; freq < fs_in * 0.5; freq += fd_increment) {  
     bool first_phase_fail = false; // we haven't had a phase failure yet.
-
+    std::ofstream of(SoDa::Format("dat_%0.dat").addF(freq,'e').str());
     if(i % 100 == 0) {
       std::cout << SoDa::Format("testing frequency %0 corner = %1 nco pi: %2\n")
 	.addF(freq, 'e')
@@ -258,11 +267,12 @@ bool testRatio(double fs_in, double fs_out) {
       inpdg.accumulate(in_buffer);
       // resample
       resamp.apply(in_buffer, out_buffer); 
+      dump2CVec(of, out_buffer, ref_out_buffer);
       if((i == 2) && (band_seg == PASS)) {
 	// sync the reference NCO
 	// find the phase of the -10th element in the output buffer
-	float ang = std::arg(out_buffer[out_buffer.size() - 10]);
-	float ref_ang = std::arg(ref_out_buffer[ref_out_buffer.size() - 10]);
+	float ang = std::arg(out_buffer[out_buffer.size() >> 1]);
+	float ref_ang = std::arg(ref_out_buffer[ref_out_buffer.size() >> 1]);
 	// now align the reference NCO with the output stream.
 	float nco_ang = ref_nco.getAngle();
 	float ang_cor = ang - ref_ang; 
@@ -276,7 +286,7 @@ bool testRatio(double fs_in, double fs_out) {
       calcMag(in_buffer, out_buffer);
       pdg.accumulate(out_buffer);
 
-      if(0 && (i > 2) && (band_seg == PASS)) {
+      if((i > 2) && (band_seg == PASS)) {
 	// check to see that the output buffer is smooth and
 	// looks like the reference NCO.
 	// don't worry about amplitude, just compare the angle;
@@ -309,7 +319,7 @@ bool testRatio(double fs_in, double fs_out) {
 
     // check the pdg.
     if(!checkPDG(pdg, out_buffer, fs_out, freq, band_seg)) {
-      std::cout << SoDa::Format("Bad result at freq %0\n").addF(freq, 'e');
+      std::cout << SoDa::Format("Bad result at freq %0 band seg %1\n").addF(freq, 'e').addI(band_seg);
       std::vector<float> ipdg; 
       inpdg.get(ipdg);
       dumpVec("inpdg.dat", "whatever.", ipdg, fs_in, freq);

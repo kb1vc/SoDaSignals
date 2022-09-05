@@ -154,5 +154,35 @@ namespace SoDa {
       out[(mid + i) % mod] = temp[i]; 
     }
   }
+  
+  uint32_t FFT::findGoodSize(uint32_t min_size) {
+    // look for the nearest number of the form 2^n * 3^m * 5^p
+    // that is greater than min_size.
+
+    // don't go more than 2^x+1 where ceil(log2(min_size)) = x
+    int max_n = 0;
+    while((1 << max_n) < min_size) max_n++;
+    max_n++;
+    uint32_t max_val = 4 << max_n;
+
+    uint32_t best_val = max_val;
+    
+    int n, m, p;
+    int vn, vm, vp; 
+    for(n = 0, vn=1; n < max_n; n++, vn *= 2) {
+      for(m = 0, vm = 1; m < 4; m++, vm *= 3) {
+	for(p = 0, vp=1; p < 3; p++, vp *= 5) {
+	  auto v = vn * vm * vp; 
+	  if((v > min_size) && (v < best_val)) {
+	    best_val = v;
+	    std::cerr << v << " " << n << " " << m << " " << p << "\n";
+
+	  }
+	}
+      }
+    }	
+    return best_val; 
+  }
+
 }
 

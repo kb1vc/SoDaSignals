@@ -36,6 +36,12 @@ namespace SoDa {
     setFreq(frequency); 
     cur_angle = 0.0; 
   }
+
+  NCO::NCO() {
+    sample_rate = 1;
+    setFreq(0);
+    cur_angle = 0.0; 
+  }
   
   void NCO::setFreq(double frequency) {
     if(fabs(frequency) > 0.5 * sample_rate) {

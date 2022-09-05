@@ -5,6 +5,7 @@ set(SIGNALS_SRCS
 	FilterSpec.cxx
 	ReSampler.cxx
 	NCO.cxx
+	OSFilter.cxx
 	)
 
 

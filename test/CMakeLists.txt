@@ -11,6 +11,16 @@ target_link_libraries(FFTTiming sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(FFTTiming PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(FFTTiming PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 
+add_executable(FilterTest FilterTest.cxx Checker.cxx)
+target_link_libraries(FilterTest sodasignals ${SoDaUtils_LIBRARIES})
+target_link_directories(FilterTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
+target_include_directories(FilterTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
+
+add_executable(OSFilterTest OSFilterTest.cxx Checker.cxx)
+target_link_libraries(OSFilterTest sodasignals ${SoDaUtils_LIBRARIES})
+target_link_directories(OSFilterTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
+target_include_directories(OSFilterTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
+
 
 add_executable(PeriodogramTest PeriodogramTest.cxx)
 target_link_libraries(PeriodogramTest sodasignals ${SoDaUtils_LIBRARIES})

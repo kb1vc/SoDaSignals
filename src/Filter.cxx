@@ -27,19 +27,51 @@
 */
 
 #include "Filter.hxx"
+#include <iostream>
+#include <fstream>
 
 namespace SoDa {
 
+  /**
+   * Here's the recipe
+calculate the cutoff indexes in a discrete frequency domain view with M buckets
+Hproto = 000111....0000...0
+Hproto_r = fftshift(Hproto)
+hproto = ifft(HProto_r)
+// center the impulse
+hproto_r = ifftshift(hproto)
+hs = hproto_r * win
+
+// now stuff the big image
+h.resize(buffer_size)
+h[0:hs.size...] = hs
+H = fft(h)
+   */
+  void dumpCFVec(const std::string & fname, std::vector<std::complex<float>> & fv) {
+    std::ofstream of(fname); 
+    for(auto v : fv) {
+      of << SoDa::Format("%0 %1\n").addF(v.real(), 'e').addF(v.imag(), 'e');
+    }
+    of.close();
+  }
+
+  void dumpFVec(const std::string & fname, std::vector<float> & fv) {
+    std::ofstream of(fname); 
+    for(auto v : fv) {
+      of << SoDa::Format("%0 %1\n").addF(v, 'e');
+    }
+    of.close();
+  }
+  
   Filter::Filter(float low_cutoff, float high_cutoff, float skirt, 
 		 float sample_rate, unsigned int taps,
 		 unsigned int image_size) {
     
     FilterSpec fspec(sample_rate, taps);
     
-    fspec.add(low_cutoff - skirt, 0)
-      .add(low_cutoff, 1)
-      .add(high_cutoff, 1)                        
-      .add(high_cutoff + skirt, 0);
+    fspec
+      .add(low_cutoff, 1.0)
+      .add(high_cutoff + skirt * 0.5, 0.0);
     
     makeFilter(fspec, image_size);
   }
@@ -48,11 +80,12 @@ namespace SoDa {
 		 unsigned int image_size) {
     makeFilter(filter_spec, image_size);
   }
-  
+
   void Filter::makeFilter(FilterSpec & filter_spec, 
 			  unsigned int _image_size) {
     image_size = _image_size;
     auto num_taps = filter_spec.getTaps();    
+    std::cerr << "making filter with " << num_taps << "\n";
     // first create a frequency domain ideal filter:
     std::vector<std::complex<float>> Hproto(num_taps);
     std::vector<std::complex<float>> hproto(num_taps);    
@@ -75,23 +108,25 @@ namespace SoDa {
 
     // now apply a window
     std::vector<float> window(num_taps);
+    dumpCFVec("pre_windowed_proto.dat", hproto);    
     hammingWindow(window);
+    dumpFVec("windowe.dat", window);    
     for(int i = 0; i < num_taps; i++) {
       hproto[i] = hproto[i] * window[i];
     }
-
+    dumpCFVec("windowed_proto.dat", hproto);
     // so now we have the time domain prototype.
 
     // embed it in the impulse response of the appropriate length
     h.resize(image_size);
     for(int i = 0; i < num_taps; i++) {
-      h[i] = hproto[i] / ((float) num_taps); 
+      h[i] = hproto[i];
     }
     // zero the rest
     for(int i = num_taps; i < image_size; i++) {
       h[i] = std::complex<float>(0.0, 0.0);
     }
-    
+    dumpCFVec("h.dat", h);    
     // now make the frequency domain filter
     
     fft = std::unique_ptr<FFT>(new FFT(image_size));
@@ -100,10 +135,30 @@ namespace SoDa {
     fft->fft(h, H);
 
     // and now we have it. But we need to rescale by image_size
-    float scale = 1/((float) image_size);
-    for(auto & v : H) {
-      v = v * scale; 
+    
+    // find the max value and use this as 0dB
+    float max = 0.0; 
+    for(auto v : H) {
+      auto vm = std::abs(v); 
+      max = std::max(vm, max); 
     }
+
+    float scale = 1.0 / max;
+    std::cerr << SoDa::Format("Filter::make Scale factor %0 length %1\n")
+      .addF(scale, 'e')
+      .addI(H.size());
+    
+    for(auto & v : H) {
+      v = v * scale;
+    }
+    
+    std::ofstream of("FilterH.dat");
+    for(auto v : H) {
+      of << SoDa::Format("%0 %1\n")
+	.addF(v.real(), 'e')
+	.addF(v.imag(), 'e');
+    }
+    of.close();
   }
 
   void Filter::hammingWindow(std::vector<float> & w) {
@@ -136,11 +191,11 @@ namespace SoDa {
       tbuf_ptr = & in_buf; 
     }
     
-    
+    float scale = 1.0 / float(H.size());
     if(in_out_mode.time_out) {
       // now multiply
       for(int i = 0; i < tbuf_ptr->size(); i++) {
-	(*tbuf_ptr)[i] = (*tbuf_ptr)[i] * H[i];
+	(*tbuf_ptr)[i] = (*tbuf_ptr)[i] * H[i] * scale;
       }
       // invert
       fft->ifft(*tbuf_ptr, out_buf); 
@@ -149,7 +204,7 @@ namespace SoDa {
       // they want frequency output
       // multiply directly into output buffer
       for(int i = 0; i < out_buf.size(); i++) {
-	out_buf[i] = (*tbuf_ptr)[i] * H[i];
+	out_buf[i] = (*tbuf_ptr)[i] * H[i] * scale;
       }
     }
     return in_buf.size();

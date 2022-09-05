@@ -96,11 +96,17 @@ namespace SoDa {
 	       unsigned int taps, FType filter_type = COMPLEX);
     
     /**
+     * copy constructor
+     *
+     */
+    FilterSpec(const FilterSpec & f);
+
+    /**
      * Set the starting gain for this filter. (Defaults to -200dB)
      * @param gain the ideal amplitude at the lowest filter frequency (- sample_freq / 2)
      * @return reference to this FilterSpec
      */
-    FilterSpec & start(float gain); 
+    FilterSpec & start(float gain);
 
     /**
      * Add a point in the transfer function. This specifies
@@ -134,7 +140,7 @@ namespace SoDa {
     unsigned int estimateTaps(unsigned int min, unsigned int max); 
 
     unsigned int setTaps(unsigned int new_tapcount) { 
-      taps = new_tapcount; 
+      taps = new_tapcount;
       return taps;
     }
     

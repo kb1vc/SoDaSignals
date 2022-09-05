@@ -62,7 +62,7 @@ namespace SoDa {
      * 
      * @param in the input vector. This need not be a multiple of the segment_length
      */
-    void accumulate(std::vector<std::complex<float>> & in);
+    void accumulate(const std::vector<std::complex<float>> & in);
 
     /**
      * @brief return the current accumulated periodogram

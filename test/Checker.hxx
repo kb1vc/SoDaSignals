@@ -26,51 +26,42 @@
   (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
   OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
-
-#include <complex>
 #include <vector>
+#include <complex>
+#include "../include/Periodogram.hxx"
+#include "../include/NCO.hxx"
 
 namespace SoDa {
-  /**
-   * 
-   * @class NCO
-   * Numerically controlled oscillator
-   */
-  class NCO {
+  typedef std::vector<std::complex<float>> CVec; 
+  class Checker {
   public:
-    /**
-     * @brief Constructor
-     *
-     * @param sample_rate sample rate for the output stream
-     * @param frequency frequency of the output stream
-     */
-    NCO(double sample_rate, double frequency);
-    NCO();
-
-    void setSampleRate(double sr) { 
-      sample_rate = sr; 
-    }
-    void setFreq(double frequency);
-
-    void setAngle(double ang) { cur_angle = ang; }
-    double getAngle() { return cur_angle; }
-    double getAngleIncr() { return ang_incr; }
+    Checker(double sample_freq, uint32_t num_buckets = 2048);
     
-    enum SumIt { ADD, SET };
-    
-    void get(std::vector<std::complex<float>> & out, SumIt sum = SET);
+    enum CheckRegion { STOP_BAND, PASS_BAND, TRANSITION_BAND };
 
-    void get(std::vector<std::complex<double>> & out, SumIt sum = SET);     
+    void setFreqAndReset(double freq, CheckRegion region); 
 
-    class FreqOutOfBounds : public std::runtime_error {
-    public:
-      FreqOutOfBounds(double fs, double fr);
-    };
+    void checkResponse(const CVec & data);
     
+    void checkFinal();
+    
+    bool testPassed() { return test_passed && (sample_count > 32 * 1024); }
+
+    uint32_t getNumBuckets();
+
+    double getBucketWidth();
+
   protected:
-    double sample_rate; 
-    double cur_angle;
-    double ang_incr; 
-  }; 
+    double bucketToFreq(uint32_t bucket);
+    
+    uint32_t num_buckets; 
+    CheckRegion check_region; 
+    double cur_freq;
+    double sample_freq; 
+    int pass_count;
+    uint32_t sample_count; 
+    SoDa::Periodogram * pdg_p;
+    bool test_passed; 
+    NCO ref_nco; 
+  };
 }
-

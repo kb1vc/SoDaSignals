@@ -85,7 +85,7 @@ namespace SoDa {
     clear();
   }
 
-  void Periodogram::accumulate(std::vector<std::complex<float>> & in) {
+  void Periodogram::accumulate(const std::vector<std::complex<float>> & in) {
     size_t curpos = 0; 
 
     while(curpos != in.size()) {
@@ -149,6 +149,7 @@ namespace SoDa {
   
   void Periodogram::clear() {
     input_save_buffer_valid_count = 0; 
+    accumulation_count = 0; 
     for(auto & v : acc_buffer) {
       v = 0.0; 
     }

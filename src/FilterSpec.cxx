@@ -27,6 +27,7 @@
 */
 
 #include "FilterSpec.hxx"
+#include <cmath>
 
 namespace SoDa {
   FilterSpec::FilterSpec(float sample_rate, unsigned int taps, FType filter_type) :
@@ -34,7 +35,7 @@ namespace SoDa {
   {
   }
 
-  unsigned int FilterSpec::estimateTaps(unsigned int min, unsigned int max) {
+  unsigned int FilterSpec::estimateTaps(unsigned int min_taps, unsigned int max_taps) {
     // find the narrowest transition region
     if(!sorted) sortSpec();
 
@@ -47,7 +48,7 @@ namespace SoDa {
     last_corner = spec.front().freq;
     for(const auto & v : spec) {
       if(v.gain != last_gain) {
-	float inter = v.gain - last_gain;
+	float inter = v.freq - last_corner;
 	if(inter < min_interval) min_interval = inter;
 	last_gain = v.gain;
 	last_corner = v.freq;
@@ -57,46 +58,34 @@ namespace SoDa {
     // now use fred harris's rule for the number of filter taps?
     // assume 40 dB stop band attenuation
     float ftaps = sample_rate * 40 / (min_interval * 22);
-    float comp_taps = 2 * int(ftaps / 2) + 1; // make sure it is odd
-
-    return comp_taps;
+    std::cerr << "ftaps = " << ftaps << "\n";
+    unsigned int comp_taps = 2 * int(ftaps / 2) + 1; // make sure it is odd
+    std::cerr << "comp_taps = " << comp_taps << " min_taps = " << min_taps << "\n";
+    taps = std::max(comp_taps, min_taps);
+    taps = std::min(taps, max_taps);
+    std::cerr << "taps = " << taps << "\n";
+    return taps;
   }
 
   void FilterSpec::fillHproto(std::vector<std::complex<float>> & Hproto) {
     if(!sorted) sortSpec();
+    std::cerr << "FilterSpec resizes Hproto to " << taps << "\n";
+    Hproto.resize(taps);
     
     std::list<std::pair<Corner,Corner>> edges;
     float start_freq = (filter_type == REAL) ? 0.0 : - (sample_rate / 2);
     float end_freq = sample_rate/2;
     Corner last(start_freq, -200.0);
 
-    for(auto c : spec) {
-      edges.push_back(std::pair<Corner,Corner>(last, c));
-      last = c; 
-    }
-    edges.push_back(std::pair<Corner,Corner>(last, Corner(end_freq, -200.0)));
-
-    // now go through the edges.
-    for(auto e : edges) {
-	
-      auto start_idx = indexHproto(e.first.freq);
-      auto end_idx = indexHproto(e.second.freq);
-      // note the 0.05 multiplier -- we're dealing in filter amplitudes.... ;(
-      auto start_amp = std::pow(10.0, 0.05 * e.first.gain);
-      auto end_amp = std::pow(10.0, 0.05 * e.second.gain);
-      if(start_idx == end_idx) {
-	auto max_amp = (start_amp > end_amp) ? start_amp : end_amp; 
-	Hproto[start_idx] = std::complex<float>(max_amp);
-      }
-      else {
-	auto rise = end_amp / start_amp;
-	auto run =  float(end_idx - start_idx);
-	auto mult = pow(rise, 1.0 / run);
-	float amp = start_amp; 
-	for(int i = start_idx; i <= end_idx; i++) {
-	  Hproto[i] = std::complex<float>(amp, 0.0);
-	  amp *= mult;
-	}
+    for(int i = 0; i < taps; i++) Hproto.at(i) = std::complex<float>(0.0,0.0);
+    for(auto v : spec) {
+      auto idx = indexHproto(v.freq); 
+      std::cerr << SoDa::Format("Filling from %0 to %1 with %2\n")
+	.addI(idx)
+	.addI(taps)
+	.addF(v.gain, 'e');
+      for(int i = idx; i < taps; i++) {
+	Hproto.at(i) = std::complex<float>(v.gain,0.0);
       }
     }
   }
@@ -162,7 +151,8 @@ namespace SoDa {
   unsigned int FilterSpec::indexHproto(float freq) {
     unsigned int ret;
     float hsamprate = sample_rate / 2;
-    ret = int(((freq + hsamprate) / sample_rate) * taps + 0.50001);
+    ret = int(((taps + 1) / 2) + (taps * freq / sample_rate) + 0.50001);
+
     if(ret >= taps) ret = taps - 1;
     
     return ret;

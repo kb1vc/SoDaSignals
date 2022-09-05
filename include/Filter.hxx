@@ -47,15 +47,21 @@
 #include <complex>
 #include <vector>
 #include <fftw3.h>
-#include "BlockOp.hxx"
 #include "FilterSpec.hxx"
 #include "FFT.hxx"
 #include <stdexcept>
 
 namespace SoDa {
 
+    // all "apply" functions can bypass one or more of the input and output conversions
+  // into the frequency domain. 
+  struct InOutMode {
+    InOutMode(bool ti, bool to) : time_in(ti), time_out(to) { }
+    bool time_in;
+    bool time_out; 
+  };
   
-  class Filter : public BlockOp {
+  class Filter {
   public:
     class BadBufferSize : public std::runtime_error {
     public:
@@ -79,7 +85,6 @@ namespace SoDa {
     Filter(float low_cutoff, float high_cutoff, float skirt,
 	   float sample_rate, unsigned int taps, unsigned int image_size);
 
-    
     /// run the filter on a complex input stream
     /// @param in_buf the input buffer I/Q samples (complex)
     /// @param out_buf the output buffer I/Q samples (complex)
