@@ -32,18 +32,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
+#include <fstream>
 
 namespace SoDa {
   typedef std::vector<std::complex<float>> CVec;  
   static void dumpCVec(const std::string & fn, CVec a) {
-
+    std::ofstream of(fn);
     for(int i = 0; i < a.size(); i++) {
-      std::cout << SoDa::Format("%0 %1 %2\n")
+      of  << SoDa::Format("%0 %1 %2\n")
 	.addI(i)
 	.addF(a.at(i).real(), 'e')
 	.addF(a.at(i).imag(), 'e');
     }
-    std::cout;
+    of.close();
   }
   
   static void calcMag(const std::string & st, std::vector<std::complex<float>> & ve) {
@@ -80,14 +81,19 @@ namespace SoDa {
     // this all works for D > U.  But for U > D we end up pitch shifting. 
     
     // How big is the low pass filter? 
-    double cutoff = std::min(FS_in, FS_out) * 0.4;
+    double corner_factor = 0.45; 
+    double passband = std::min(FS_in, FS_out);
+    double cutoff = passband * corner_factor; 
+
+    double skirt_proportion = FS_in / (passband * (0.5 - corner_factor));
 
     double supression = 60.0;
     // use fred harris's estimate.
     // transition band is 10 % of FS_out
-    uint32_t num_taps = int(0.5 + 10.0 * supression / 22.0); 
+    uint32_t num_taps = int(0.5 + skirt_proportion * supression / 22.0); 
     if((num_taps % 2) == 0) num_taps++;
-    if(num_taps < 31) num_taps = 31;
+    if(num_taps < 121) num_taps = 121;
+    // std::cerr << SoDa::Format("ReSampler: first guess at numtaps = %0\n").addI(num_taps);
     
     // now find the input buffer size -- make it long enough to span time_span_min
     uint32_t min_in_samples = uint32_t(FS_in * time_span_min);
@@ -151,17 +157,17 @@ namespace SoDa {
     out_fft_p = std::unique_ptr<SoDa::FFT>(new SoDa::FFT(Ly));    
     
     // and that's it.
-    std::cerr << SoDa::Format("lpf taps %0  Lx %1 save_count %2 discard_count %3 inputBufferSize %4 outputBufferSize %5 U %6 D %7 fs_in %8 fs_out %9\n")
-      .addI(num_taps)
-      .addI(Lx)
-      .addI(save_count)
-      .addI(discard_count)
-      .addI(getInputBufferSize())
-      .addI(getOutputBufferSize())
-      .addI(U)
-      .addI(D)
-      .addF(FS_in, 'e')
-      .addF(FS_out, 'e');
+    // std::cerr << SoDa::Format("lpf taps %0  Lx %1 save_count %2 discard_count %3 inputBufferSize %4 outputBufferSize %5 U %6 D %7 fs_in %8 fs_out %9\n")
+    //   .addI(num_taps)
+    //   .addI(Lx)
+    //   .addI(save_count)
+    //   .addI(discard_count)
+    //   .addI(getInputBufferSize())
+    //   .addI(getOutputBufferSize())
+    //   .addI(U)
+    //   .addI(D)
+    //   .addF(FS_in, 'e')
+    //   .addF(FS_out, 'e');
   }
 
 
@@ -199,16 +205,19 @@ namespace SoDa {
     // now do the FFT
     in_fft_p->fft(x, X);
 
-    // apply the filter
+    // apply the filter -- we must do this
+    // even if we are upsampling, as a raw copy of
+    // an FFT segment looks like a brick wall otherwise. 
     lpf_p->apply(X, X, InOutMode(false,false));
       
     // now load the output Y vector
     if(Y.size() < X.size()) {
       auto y_half_count = ((Ly + 1)/ 2);
-      for(int i = 0; i < y_half_count; i++) {
+      for(int i = 0; i < y_half_count - 1; i++) {
+	Y.at(i) = X.at(i);	
 	Y.at(Ly - 1 - i) = X.at(Lx - 1 - i);	
-	Y.at(i) = X.at(i);
       }
+      Y.at(y_half_count) = X.at(y_half_count);
     }
     else {
       // we are up sampling. Y gets half of X in the bottom, half in the top.
@@ -222,17 +231,16 @@ namespace SoDa {
 	  Y.at((Ly - 1) -(Lx - 1) + i) = X.at(i);
 	}
       }
-      //      lpf_p->apply(Y, Y, InOutMode(false,false));      
     }
 
-    //    dumpCVec("Y.dat", Y);    
+    // dumpCVec("Y.dat", Y);    
 
     // do the inverse FFT
     out_fft_p->ifft(Y, y);
       
     // and copy to the output
     for(int i = 0; i < getOutputBufferSize(); i++) {
-      out.at(i) = y.at(i + discard_count); // / scale_factor;
+      out.at(i) = y.at(i + discard_count);
     }
 
     apcount++; 

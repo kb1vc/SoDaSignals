@@ -109,7 +109,7 @@ void calcMag(CVec & in_buffer, CVec & out_buffer) {
 enum BandSeg { NONE, PASS, TRANSITION, OUT_OF_BAND }; 
 
 bool checkPDG(SoDa::Periodogram & pdg, 
-	      std::vector<std::complex<float>> & out,
+	      std::vector<std::complex<float>> & out, 
 	      double fs,
 	      double freq, 
 	      BandSeg seg) {
@@ -138,14 +138,14 @@ bool checkPDG(SoDa::Periodogram & pdg,
 
   float peak_out = std::abs(pdg_out[peak_idx]);
   if(seg == PASS) {
-    auto mag = std::abs(out[out.size() / 2]);
-    auto pow = 20 * std::log10(mag);
-    if((pow > 1.0) || (pow < -1.0)) {
+    auto mag = std::abs(peak_out * sf);
+    if((mag > 1.2) || (mag < 0.9)) {
       dumpVec("pdgout_weak_peak.dat", 
 	      SoDa::Format("FAILED bad peak power: peak freq = %0 peak mag %1 peak_out %2 sf %3\n")
 	      .addF(peak_freq, 'e').addF(mag, 'e').addF(peak_out, 'e').addF(sf, 'e').str(),
 	      pdg_out, fs, freq);
       std::cout.flush();
+      exit(-1);
       return false; 
     }
   }
@@ -168,13 +168,13 @@ bool checkPDG(SoDa::Periodogram & pdg,
 
   
   
-  if(seg == OUT_OF_BAND) {
-    for(int i = 0; i < pdg_out.size(); i++) {
-      // are we below a respectable stop-band level for the
-      // range?
+  for(int i = 0; i < pdg_out.size(); i++) {
+    // are we below a respectable stop-band level for the
+    // range?
+    if((i < low_rs_cutoff_idx) || (i > high_rs_cutoff_idx)) {
       // is the level below -40db
       float vl; 
-      if(pdg_out[i] < 1e-40) vl = -120; 
+      if(pdg_out[i] < 1e-20) vl = -120; 
       else  vl = 20 * std::log10(pdg_out[i]);
       if(vl > -40) {
 	is_ok = false;
@@ -188,6 +188,7 @@ bool checkPDG(SoDa::Periodogram & pdg,
 		pdg_out, fs, freq);
 	return false; 
       }
+	
     }
   }
   
@@ -200,24 +201,17 @@ bool testRatio(double fs_in, double fs_out) {
   // first create the resampler sized for 50 mS blocks.
   SoDa::ReSampler resamp(fs_in, fs_out, 0.05); 
 
-  
+  auto ncosr = std::max(fs_out, fs_in);
+  SoDa::NCO nco(ncosr, ncosr * 0.125); // initial setting.  
   double fs_lim = std::max(fs_in, fs_out);
-  SoDa::NCO nco(fs_in, fs_in * 0.125); // initial setting.
-  SoDa::NCO ref_nco(fs_out, 0.0);
   auto out_buf_size = resamp.getOutputBufferSize();
   auto in_buf_size = resamp.getInputBufferSize();
   CVec in_buffer(in_buf_size);
   CVec out_buffer(out_buf_size); 
-  CVec ref_out_buffer(out_buf_size); 
   
-  uint32_t pdg_seg_len = 2048;
+  uint32_t pdg_seg_len = 1024; 
   SoDa::Periodogram pdg(pdg_seg_len); 
   
-  // std::cout << SoDa::Format("in buf size %0 out buf size %1 fs_in %2 fs_out %3\n")
-  //   .addI(in_buf_size).addI(out_buf_size)
-  //   .addF(fs_in, 'e').addF(fs_out, 'e');
-  
-  // sweep the frequency. Do 1023 sample frequencies.
 
   double hfs_out = std::min(fs_in,fs_out) * 0.5;
 
@@ -232,133 +226,66 @@ bool testRatio(double fs_in, double fs_out) {
 
 
   // sweep the frequency. Do 1023 sample frequencies.
-  double fd_increment = (fs_in / double(0.5 * pdg_seg_len));
+  double fd_increment = fs_in / double(1253);
 
   pdg.clear();
   int i = 0;
-  int region = 0;
-  for(double freq = -fs_in * 0.5; freq < fs_in * 0.5; freq += fd_increment) { // fd_increment) {
-    bool first_phase_fail = false; // we haven't had a phase failure yet.
+  // sweep the output passband from -fs_out/2 to fs_out/2
+  double freq_incr = fs_out / double(pdg_seg_len);
+  bool collect = false; 
+  for(double freq = -fs_in * 0.5; freq < fs_in * 0.5; freq += fs_out / double(pdg_seg_len)) { 
 
-    if(i % 100 == 0) {
-      std::cout << SoDa::Format("testing frequency %0 corner = %1 nco pi: %2\n")
-	.addF(freq, 'e')
-	.addF(hfs_out, 'e')
-	.addF(nco.getAngleIncr(), 'e');
-      std::cout.flush();
-    }
-    i++;
-    nco.setFreq(freq);
-    
-
-    pdg.clear();      
-    
-    auto fa = fabs(freq); 
-    if(fa < 0.8 * hfs_out) {
-      // in the passband.
-      if(band_seg != PASS) {
-	std::cerr << SoDa::Format("Enter PASS segment at freq %0\n").addF(freq, 'e');
+    if ((freq > 0.0) && (freq < freq_incr * 1.1)) {
+      if(collect == false) {
+	collect = true; 
+	pdg.clear();
       }
-      band_seg = PASS;
-    }
-    else if(fa < 1.1 * hfs_out) {
-      if(band_seg != TRANSITION) {
-	std::cerr << SoDa::Format("Enter TRANSITION segment at freq %0\n").addF(freq, 'e');
-      }
-      band_seg = TRANSITION;
     }
     else {
-      if(band_seg != OUT_OF_BAND) {
-	std::cerr << SoDa::Format("Enter OUT_OF_BAND segment at freq %0\n").addF(freq, 'e');
-      }
-      band_seg = OUT_OF_BAND;
-    }
-
-    
-    last_band_seg = band_seg;
-    
-    if(band_seg == PASS) {
-      ref_nco.setFreq(freq);
-    }
-
-    
-    for(int i = 0; i < num_sweeps; i++) {
-      // fill with the tone
-      nco.get(in_buffer); 
-      ref_nco.get(ref_out_buffer); 
-
-      inpdg.accumulate(in_buffer);
-      // resample
-      resamp.apply(in_buffer, out_buffer);
-
-      if((i == 2) && (band_seg == PASS)) {
-	// sync the reference NCO
-	// find the phase of the -10th element in the output buffer
-	float ang = std::arg(out_buffer[out_buffer.size() >> 1]);
-	float ref_ang = std::arg(ref_out_buffer[ref_out_buffer.size() >> 1]);
-	// now align the reference NCO with the output stream.
-	float nco_ang = ref_nco.getAngle();
-	float ang_cor = ang - ref_ang; 
-	fixAngle(ang_cor);
-	ref_nco.setAngle(nco_ang + ang_cor);
-	continue;
-      }
-      // accumulate the PDG
-      // skip the first resample buffer. 
-      // calculate the amplitude
-      calcMag(in_buffer, out_buffer);
-
-      pdg.accumulate(out_buffer);
-
-      if(is_ok && (i > 2) && (band_seg == PASS)) {
-	// check to see that the output buffer is smooth and
-	// looks like the reference NCO.
-	// don't worry about amplitude, just compare the angle;
-	double ai = std::fabs(ref_nco.getAngleIncr());
-	for(int j = 0; j < out_buffer.size(); j++) {
-	  
-	  auto ob_ang = std::arg(out_buffer[j]); 
-	  auto ref_ang = std::arg(ref_out_buffer[j]); 
-	  //fixAngle(ob_ang);
-	  //fixAngle(ref_ang); 
-	  float diff = ref_ang - ob_ang; 
-	  fixAngle(diff);
-	  if((std::fabs(diff) > ai) && (j > 20) && !first_phase_fail && (ai > 1e-5)) {
-	    dump2CVec("badangle.dat", out_buffer, ref_out_buffer);
-	    std::cout << "FAILED\n";
-	    std::cout << SoDa::Format("Ooops... bad angle. freq %0 index %1 ref_ang = %2 ob angle %3  diff %4 bigger than %5 pass %6  ob (%7, %8)  ref (%9, %10)\n")
-	      .addF(freq, 'e').addI(j)
-	      .addF(ref_ang, 'e').addF(ob_ang, 'e')
-	      .addF(diff, 'e').addF(ai, 'e')
-	      .addI(i)
-	      .addF(out_buffer[j].real(), 'e')
-	      .addF(out_buffer[j].imag(), 'e')
-	      .addF(ref_out_buffer[j].real(), 'e')
-	      .addF(ref_out_buffer[j].imag(), 'e');
-	    first_phase_fail = true;
-	    std::vector<float> opdg;
-	    pdg.get(opdg);
-	    dumpVec("badanglePDG.dat", "whatever.", opdg, fs_in, freq);
-	    is_ok = false; 
-	    break; 
-	  }
+      if(collect) {
+	std::vector<float> pdg_out;
+	auto sf = pdg.getScaleFactor();
+	pdg.get(pdg_out);
+	for(auto & v : pdg_out) {
+	  v = v * sf; 
 	}
+	dumpVec("LowFreqPDG.dat", "whatever", pdg_out, fs_out, freq - freq_incr);
+	collect = false; 
       }
     }
-    
-    // check the pdg.
-    if(!checkPDG(pdg, out_buffer, fs_out, freq, band_seg)) {
-      std::cout << SoDa::Format("Bad result at freq %0 band seg %1\n").addF(freq, 'e').addI(band_seg);
-      std::cout.flush();
-      std::vector<float> ipdg; 
-      inpdg.get(ipdg);
-      //dumpVec("inpdg.dat", "whatever.", ipdg, fs_in, freq);
-      is_ok = false; 
-    }
-  }    
-    //exit(-1);
 
-  return is_ok;
+    nco.setFreq(freq);
+    
+    float total_power = 0.0; 
+    for(int j = 0; j < num_sweeps; j++) {
+      // fetch a new block
+      nco.get(in_buffer); 
+      // resample
+      resamp.apply(in_buffer, out_buffer); 
+
+      if(j > 0) {
+	// accumulate total power in output stream
+	for(int k = 0; k < out_buffer.size(); k++) {
+	  float mag = std::abs(out_buffer[k]);
+	  total_power += mag * mag; 
+	}
+	if(collect) {
+	  pdg.accumulate(out_buffer); 
+	}
+	float  mag = std::abs(out_buffer[out_buffer.size() / 2]);
+	total_power = mag*mag; 
+      }
+    }
+    auto resamp_rat = (fs_out / fs_in);
+    auto resamp_sf = resamp_rat * resamp_rat;
+    
+    // now print the average power vs. frequency
+    std::cout << SoDa::Format("%0 %1\n")
+      .addF(freq, 'e')
+      //      .addF(total_power / float((num_sweeps - 1)), 'e'); 
+      .addF(total_power, 'e');
+  }
+  return true; 
 }
 
 
@@ -379,36 +306,8 @@ int main(int argc, char * argv[]) {
     exit(-1);
   }
 
-  bool is_ok = true;
-
-  typedef std::pair<double, double> dpair; 
-  std::list<dpair> test_freqs = {
-    dpair(48e3, 8e3),
-    dpair(625e3, 48e3),
-    dpair(120e3, 48e3),
-    dpair(1.2e6, 48e3),
-    dpair(1.25e6, 48e3),
-    dpair(2.5e6, 48e3)
-  };
-
   if(cmd.isPresent("fsin") && cmd.isPresent("fsout")) {
     std::cerr << SoDa::Format("Test %0 -> %1\n").addF(fs_in, 'e').addF(fs_out, 'e');
-    is_ok = is_ok && testRatio(fs_in, fs_out);
-  }
-  else {
-    for(auto fp : test_freqs) {
-      std::cerr << SoDa::Format("Test %0 -> %1\n").addF(fp.first, 'e').addF(fp.second, 'e');
-      is_ok = is_ok && testRatio(fp.first, fp.second);
-      std::cerr << SoDa::Format("Test %1 -> %0\n").addF(fp.first, 'e').addF(fp.second, 'e');    
-      is_ok = is_ok && testRatio(fp.second, fp.first);    
-    }
-  }
-
-  
-  if(is_ok) {
-    std::cout << "\nPASSED\n";
-  }
-  else {
-    std::cout << "\nFAILED\n";    
+    testRatio(fs_in, fs_out);
   }
 }

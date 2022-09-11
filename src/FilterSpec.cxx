@@ -35,6 +35,35 @@ namespace SoDa {
   {
   }
 
+  FilterSpec::FilterSpec(float sample_rate, unsigned int taps, float low_cutoff, float high_cutoff, 
+			 float skirt_width, 
+			 FType filter_type) :
+    sorted(false), filter_type(filter_type), taps(taps), sample_rate(sample_rate)
+  {
+    int lo_idx = indexHproto(low_cutoff); 
+    int hi_idx = indexHproto(high_cutoff);
+    // now backwards figure the frequencies to add...
+    float hz_per_bucket = sample_rate / float(taps); 
+    float low_stop = low_cutoff -  1.0001 * hz_per_bucket;
+    float high_stop = high_cutoff + 1.0001 * hz_per_bucket;
+    float low_pass = low_cutoff + 1.0001 * hz_per_bucket; 
+    float high_pass = high_cutoff - 1.0001 * hz_per_bucket;
+    std::cerr << SoDa::Format("FilterSpec simple: low_stop %0 low_cutoff %1 high_cutoff %2 high_stop = %3\n")
+      .addF(low_stop, 'e')
+      .addF(low_cutoff, 'e')
+      .addF(high_cutoff, 'e')
+      .addF(high_stop, 'e');
+    
+    add(low_stop, 0.0);
+    //    add(low_cutoff, 0.5);
+    //    add(high_cutoff, 0.5);
+    add(low_cutoff, 1.0);
+    add(high_cutoff, 1.0);
+    add(high_stop, 0.0);
+    //    add(high_pass, 1.0);
+    //    add(low_pass, 1.0);
+  }
+  
   unsigned int FilterSpec::estimateTaps(unsigned int min_taps, unsigned int max_taps) {
     // find the narrowest transition region
     if(!sorted) sortSpec();
@@ -151,8 +180,18 @@ namespace SoDa {
   unsigned int FilterSpec::indexHproto(float freq) {
     unsigned int ret;
     float hsamprate = sample_rate / 2;
-    ret = int(((taps + 1) / 2) + (taps * freq / sample_rate) + 0.50001);
-
+    float hz_per_bucket = sample_rate / float(taps);
+    float norm_freq = freq / hz_per_bucket;
+    int bucket = int(norm_freq + 0.5);
+    std::cerr << SoDa::Format("fs:protoint hz_per_bucket = %0 freq %1 norm_freq %2 bucket %3 taps %4\n")
+      .addF(hz_per_bucket, 'e')
+      .addF(freq, 'e')
+      .addF(norm_freq, 'e')
+      .addI(bucket)
+      .addI(taps);
+    ret = ((taps - 1) / 2) + bucket;
+    if(bucket >= 0) ret++;
+    
     if(ret >= taps) ret = taps - 1;
     
     return ret;

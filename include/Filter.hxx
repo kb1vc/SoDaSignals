@@ -136,6 +136,10 @@ namespace SoDa {
     double low_edge, high_edge; 
 
     void hammingWindow(std::vector<float> & w);
+
+    void hannWindow(std::vector<float> & w);
+
+    void blackmanWindow(std::vector<float> & w);        
     
     // this is the FFT image of the filter
     std::vector<std::complex<float>> H;  ///< FFT image of the filter

@@ -67,11 +67,7 @@ H = fft(h)
 		 float sample_rate, unsigned int taps,
 		 unsigned int image_size) {
     
-    FilterSpec fspec(sample_rate, taps);
-    
-    fspec
-      .add(low_cutoff, 1.0)
-      .add(high_cutoff + skirt * 0.5, 0.0);
+    FilterSpec fspec(sample_rate, taps, low_cutoff, high_cutoff, skirt);
     
     makeFilter(fspec, image_size);
   }
@@ -108,13 +104,15 @@ H = fft(h)
 
     // now apply a window
     std::vector<float> window(num_taps);
-    dumpCFVec("pre_windowed_proto.dat", hproto);    
+    //    dumpCFVec("pre_windowed_proto.dat", hproto);    
     hammingWindow(window);
-    dumpFVec("windowe.dat", window);    
+    // hannWindow(window);    
+    //blackmanWindow(window);
+    //    dumpFVec("windowe.dat", window);    
     for(int i = 0; i < num_taps; i++) {
       hproto[i] = hproto[i] * window[i];
     }
-    dumpCFVec("windowed_proto.dat", hproto);
+    // dumpCFVec("windowed_proto.dat", hproto);
     // so now we have the time domain prototype.
 
     // embed it in the impulse response of the appropriate length
@@ -126,7 +124,7 @@ H = fft(h)
     for(int i = num_taps; i < image_size; i++) {
       h[i] = std::complex<float>(0.0, 0.0);
     }
-    dumpCFVec("h.dat", h);    
+    // dumpCFVec("h.dat", h);    
     // now make the frequency domain filter
     
     fft = std::unique_ptr<FFT>(new FFT(image_size));
@@ -151,14 +149,6 @@ H = fft(h)
     for(auto & v : H) {
       v = v * scale;
     }
-    
-    std::ofstream of("FilterH.dat");
-    for(auto v : H) {
-      of << SoDa::Format("%0 %1\n")
-	.addF(v.real(), 'e')
-	.addF(v.imag(), 'e');
-    }
-    of.close();
   }
 
   void Filter::hammingWindow(std::vector<float> & w) {
@@ -170,6 +160,26 @@ H = fft(h)
     }
   }
 
+  void Filter::hannWindow(std::vector<float> & w) {
+    int M = w.size();
+    
+    float anginc = 2 * M_PI / ((float) (M - 1));
+    for(int i = 0; i < M; i++) {
+      w[i] = 0.5 - 0.5 * cos(anginc * (float(i)));
+    }
+  }
+
+  void Filter::blackmanWindow(std::vector<float> & w) {
+    int M = w.size();
+    
+    float anginc = 2 * M_PI / ((float) (M - 1));
+    for(int i = 0; i < M; i++) {
+      w[i] = 0.42 - 0.5 * cos(anginc * (float(i))) 
+	+ 0.08 * cos(anginc * float(i) * 2.0);
+    }
+  }
+  
+  
   unsigned int Filter::apply(std::vector<std::complex<float>> & in_buf, 
 			     std::vector<std::complex<float>> & out_buf, 
 			     InOutMode in_out_mode) {

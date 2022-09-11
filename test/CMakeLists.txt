@@ -37,6 +37,11 @@ target_link_libraries(NCOTest sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(NCOTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(NCOTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 
+add_executable(ReSamplerSweep ReSamplerSweep.cxx)
+target_link_libraries(ReSamplerSweep sodasignals ${SoDaUtils_LIBRARIES})
+target_link_directories(ReSamplerSweep PUBLIC ${SoDaUtils_LIBRARY_DIRS})
+target_include_directories(ReSamplerSweep PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
+
 
 enable_testing()
 
