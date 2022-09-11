@@ -112,4 +112,10 @@ set_tests_properties(ReSamplerTest_I6 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
 
+add_test(NAME OSFilterTest
+  COMMAND $<TARGET_FILE:OSFilterTest>)
+set_tests_properties(OSFilterTest PROPERTIES
+  PASS_REGULAR_EXPRESSION "PASSED")
+
+
 

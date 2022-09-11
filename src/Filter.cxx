@@ -81,7 +81,7 @@ H = fft(h)
 			  unsigned int _image_size) {
     image_size = _image_size;
     auto num_taps = filter_spec.getTaps();    
-    std::cerr << "making filter with " << num_taps << "\n";
+
     // first create a frequency domain ideal filter:
     std::vector<std::complex<float>> Hproto(num_taps);
     std::vector<std::complex<float>> hproto(num_taps);    
@@ -104,15 +104,13 @@ H = fft(h)
 
     // now apply a window
     std::vector<float> window(num_taps);
-    //    dumpCFVec("pre_windowed_proto.dat", hproto);    
     hammingWindow(window);
     // hannWindow(window);    
-    //blackmanWindow(window);
-    //    dumpFVec("windowe.dat", window);    
+    // blackmanWindow(window);
     for(int i = 0; i < num_taps; i++) {
       hproto[i] = hproto[i] * window[i];
     }
-    // dumpCFVec("windowed_proto.dat", hproto);
+
     // so now we have the time domain prototype.
 
     // embed it in the impulse response of the appropriate length
@@ -124,7 +122,7 @@ H = fft(h)
     for(int i = num_taps; i < image_size; i++) {
       h[i] = std::complex<float>(0.0, 0.0);
     }
-    // dumpCFVec("h.dat", h);    
+
     // now make the frequency domain filter
     
     fft = std::unique_ptr<FFT>(new FFT(image_size));
@@ -142,9 +140,6 @@ H = fft(h)
     }
 
     float scale = 1.0 / max;
-    std::cerr << SoDa::Format("Filter::make Scale factor %0 length %1\n")
-      .addF(scale, 'e')
-      .addI(H.size());
     
     for(auto & v : H) {
       v = v * scale;

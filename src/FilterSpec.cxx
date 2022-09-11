@@ -48,20 +48,11 @@ namespace SoDa {
     float high_stop = high_cutoff + 1.0001 * hz_per_bucket;
     float low_pass = low_cutoff + 1.0001 * hz_per_bucket; 
     float high_pass = high_cutoff - 1.0001 * hz_per_bucket;
-    std::cerr << SoDa::Format("FilterSpec simple: low_stop %0 low_cutoff %1 high_cutoff %2 high_stop = %3\n")
-      .addF(low_stop, 'e')
-      .addF(low_cutoff, 'e')
-      .addF(high_cutoff, 'e')
-      .addF(high_stop, 'e');
     
     add(low_stop, 0.0);
-    //    add(low_cutoff, 0.5);
-    //    add(high_cutoff, 0.5);
     add(low_cutoff, 1.0);
     add(high_cutoff, 1.0);
     add(high_stop, 0.0);
-    //    add(high_pass, 1.0);
-    //    add(low_pass, 1.0);
   }
   
   unsigned int FilterSpec::estimateTaps(unsigned int min_taps, unsigned int max_taps) {
@@ -87,18 +78,18 @@ namespace SoDa {
     // now use fred harris's rule for the number of filter taps?
     // assume 40 dB stop band attenuation
     float ftaps = sample_rate * 40 / (min_interval * 22);
-    std::cerr << "ftaps = " << ftaps << "\n";
+
     unsigned int comp_taps = 2 * int(ftaps / 2) + 1; // make sure it is odd
-    std::cerr << "comp_taps = " << comp_taps << " min_taps = " << min_taps << "\n";
+
     taps = std::max(comp_taps, min_taps);
     taps = std::min(taps, max_taps);
-    std::cerr << "taps = " << taps << "\n";
+
     return taps;
   }
 
   void FilterSpec::fillHproto(std::vector<std::complex<float>> & Hproto) {
     if(!sorted) sortSpec();
-    std::cerr << "FilterSpec resizes Hproto to " << taps << "\n";
+
     Hproto.resize(taps);
     
     std::list<std::pair<Corner,Corner>> edges;
@@ -109,10 +100,6 @@ namespace SoDa {
     for(int i = 0; i < taps; i++) Hproto.at(i) = std::complex<float>(0.0,0.0);
     for(auto v : spec) {
       auto idx = indexHproto(v.freq); 
-      std::cerr << SoDa::Format("Filling from %0 to %1 with %2\n")
-	.addI(idx)
-	.addI(taps)
-	.addF(v.gain, 'e');
       for(int i = idx; i < taps; i++) {
 	Hproto.at(i) = std::complex<float>(v.gain,0.0);
       }
@@ -183,12 +170,6 @@ namespace SoDa {
     float hz_per_bucket = sample_rate / float(taps);
     float norm_freq = freq / hz_per_bucket;
     int bucket = int(norm_freq + 0.5);
-    std::cerr << SoDa::Format("fs:protoint hz_per_bucket = %0 freq %1 norm_freq %2 bucket %3 taps %4\n")
-      .addF(hz_per_bucket, 'e')
-      .addF(freq, 'e')
-      .addF(norm_freq, 'e')
-      .addI(bucket)
-      .addI(taps);
     ret = ((taps - 1) / 2) + bucket;
     if(bucket >= 0) ret++;
     

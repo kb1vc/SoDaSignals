@@ -99,11 +99,6 @@ void calcMag(CVec & in_buffer, CVec & out_buffer) {
     auto mag = std::abs(v); 
     omax = std::max(mag, omax); 
   }
-  // std::cout << SoDa::Format("Input mag %0 (%1 dB)  Output mag %2 (%3 dB)\n")
-  //   .addF(imax, 'e')
-  //   .addF(20.0 * std::log10(imax), 'e')
-  //   .addF(omax, 'e')
-  //   .addF(20.0 * std::log10(omax), 'e');
 }
 
 enum BandSeg { NONE, PASS, TRANSITION, OUT_OF_BAND }; 
@@ -213,12 +208,6 @@ bool testRatio(double fs_in, double fs_out) {
   uint32_t pdg_seg_len = 2048;
   SoDa::Periodogram pdg(pdg_seg_len); 
   
-  // std::cout << SoDa::Format("in buf size %0 out buf size %1 fs_in %2 fs_out %3\n")
-  //   .addI(in_buf_size).addI(out_buf_size)
-  //   .addF(fs_in, 'e').addF(fs_out, 'e');
-  
-  // sweep the frequency. Do 1023 sample frequencies.
-
   double hfs_out = std::min(fs_in,fs_out) * 0.5;
 
   uint32_t num_sweeps = 4; 
@@ -240,13 +229,6 @@ bool testRatio(double fs_in, double fs_out) {
   for(double freq = -fs_in * 0.5; freq < fs_in * 0.5; freq += fd_increment) { // fd_increment) {
     bool first_phase_fail = false; // we haven't had a phase failure yet.
 
-    if(i % 100 == 0) {
-      std::cout << SoDa::Format("testing frequency %0 corner = %1 nco pi: %2\n")
-	.addF(freq, 'e')
-	.addF(hfs_out, 'e')
-	.addF(nco.getAngleIncr(), 'e');
-      std::cout.flush();
-    }
     i++;
     nco.setFreq(freq);
     
@@ -256,21 +238,12 @@ bool testRatio(double fs_in, double fs_out) {
     auto fa = fabs(freq); 
     if(fa < 0.8 * hfs_out) {
       // in the passband.
-      if(band_seg != PASS) {
-	std::cerr << SoDa::Format("Enter PASS segment at freq %0\n").addF(freq, 'e');
-      }
       band_seg = PASS;
     }
     else if(fa < 1.1 * hfs_out) {
-      if(band_seg != TRANSITION) {
-	std::cerr << SoDa::Format("Enter TRANSITION segment at freq %0\n").addF(freq, 'e');
-      }
       band_seg = TRANSITION;
     }
     else {
-      if(band_seg != OUT_OF_BAND) {
-	std::cerr << SoDa::Format("Enter OUT_OF_BAND segment at freq %0\n").addF(freq, 'e');
-      }
       band_seg = OUT_OF_BAND;
     }
 
@@ -352,7 +325,7 @@ bool testRatio(double fs_in, double fs_out) {
       std::cout.flush();
       std::vector<float> ipdg; 
       inpdg.get(ipdg);
-      //dumpVec("inpdg.dat", "whatever.", ipdg, fs_in, freq);
+      dumpVec("inpdg.dat", "whatever.", ipdg, fs_in, freq);
       is_ok = false; 
     }
   }    

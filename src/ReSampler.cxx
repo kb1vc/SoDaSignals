@@ -93,18 +93,15 @@ namespace SoDa {
     uint32_t num_taps = int(0.5 + skirt_proportion * supression / 22.0); 
     if((num_taps % 2) == 0) num_taps++;
     if(num_taps < 121) num_taps = 121;
-    // std::cerr << SoDa::Format("ReSampler: first guess at numtaps = %0\n").addI(num_taps);
     
     // now find the input buffer size -- make it long enough to span time_span_min
     uint32_t min_in_samples = uint32_t(FS_in * time_span_min);
     uint32_t min_out_samples = (U * min_in_samples) / D;
 
-    // std::cerr << SoDa::Format("ReSampler:: min_in_samples = %0 min_out_samples = %1\n").addI(min_in_samples).addI(min_out_samples); 
     while((min_in_samples < 1000) || (min_out_samples < 1000)) {
       // need to goose min_in_samples until it is big enough
       min_in_samples += 1000;
       min_out_samples = (U * min_in_samples) / D;
-      // std::cerr << SoDa::Format("ReSampler:: adj: min_in_samples = %0 min_out_samples = %1\n").addI(min_in_samples).addI(min_out_samples);       
     }
     
     scale_factor = float(D) / float(U);
@@ -113,10 +110,6 @@ namespace SoDa {
     Lx = k * D;
     Ly = k * U;
 
-    // std::cerr << SoDa::Format("ReSampler:: Lx = %0 Ly = %1 k = %2\n")
-    //   .addI(Lx)
-    //   .addI(Ly)
-    //   .addI(k);
     // setup the save buffer -- it is at least as long as the filter, and must
     // be a multiple of D.
     int savek = (num_taps + D - 1) / D;
@@ -156,18 +149,6 @@ namespace SoDa {
     in_fft_p = std::unique_ptr<SoDa::FFT>(new SoDa::FFT(Lx));
     out_fft_p = std::unique_ptr<SoDa::FFT>(new SoDa::FFT(Ly));    
     
-    // and that's it.
-    // std::cerr << SoDa::Format("lpf taps %0  Lx %1 save_count %2 discard_count %3 inputBufferSize %4 outputBufferSize %5 U %6 D %7 fs_in %8 fs_out %9\n")
-    //   .addI(num_taps)
-    //   .addI(Lx)
-    //   .addI(save_count)
-    //   .addI(discard_count)
-    //   .addI(getInputBufferSize())
-    //   .addI(getOutputBufferSize())
-    //   .addI(U)
-    //   .addI(D)
-    //   .addF(FS_in, 'e')
-    //   .addF(FS_out, 'e');
   }
 
 
