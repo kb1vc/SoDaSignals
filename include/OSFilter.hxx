@@ -74,6 +74,9 @@ namespace SoDa {
     OSFilter(float low_cutoff, float high_cutoff, float skirt,
 	     float sample_rate, unsigned int buffer_size);
 
+    /// Some subclasses of OSFilter don't have much to say
+    /// at construction time. 
+    OSFilter(); 
     
     /// run the filter on a complex input stream
     /// @param in_buf the input buffer I/Q samples (complex)
@@ -100,6 +103,13 @@ namespace SoDa {
   protected:
     void makeOSFilter(FilterSpec & filter_spec, 
 		      unsigned int _buffer_size);
+
+    // This is used in the hilbert transformer, as its filter shape
+    // is rather strange. 
+    void makeGenericFilter(std::vector<std::complex<float>> & H,
+			   unsigned int num_taps, 
+			   unsigned int buffer_size, 
+			   float gain = 1.0);
     
     uint32_t buffer_size; 
     
@@ -109,8 +119,6 @@ namespace SoDa {
     std::vector<std::complex<float>> save_buf;
     std::vector<std::complex<float>> y_augmented;
     std::vector<std::complex<float>> X, Y; 
-
-
   };
 }
 

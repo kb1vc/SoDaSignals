@@ -65,31 +65,33 @@ H = fft(h)
   
   Filter::Filter(float low_cutoff, float high_cutoff, float skirt, 
 		 float sample_rate, unsigned int taps,
-		 unsigned int image_size) {
+		 unsigned int image_size, 
+		 float gain) {
     
     FilterSpec fspec(sample_rate, taps, low_cutoff, high_cutoff, skirt);
     
-    makeFilter(fspec, image_size);
+    makeFilter(fspec, image_size, gain);
   }
 
   Filter::Filter(FilterSpec & filter_spec, 
-		 unsigned int image_size) {
-    makeFilter(filter_spec, image_size);
+		 unsigned int image_size,
+		 float gain) {
+    makeFilter(filter_spec, image_size, gain);
   }
 
-  void Filter::makeFilter(FilterSpec & filter_spec, 
-			  unsigned int _image_size) {
+  Filter::Filter(std::vector<std::complex<float>> & Hproto, 
+		 unsigned int fft_size, float gain) {
+    makeFilter(Hproto, Hproto.size(), fft_size, gain);
+  }
+  
+  void Filter::makeFilter(std::vector<std::complex<float>> Hproto, 
+			  unsigned int num_taps, 
+			  unsigned int _image_size, 
+			  float gain) {
     image_size = _image_size;
-    auto num_taps = filter_spec.getTaps();    
-
-    // first create a frequency domain ideal filter:
-    std::vector<std::complex<float>> Hproto(num_taps);
     std::vector<std::complex<float>> hproto(num_taps);    
 
-    // crawl through the filter corners
-    float cur_value = 0.0;
-
-    filter_spec.fillHproto(Hproto);
+    std::cerr << "Filter::makeFilter H,t,i image_size = " << image_size << "\n";
     
     // now we've got a frequency domain prototype.
     // first shift it to fit the FFT picture
@@ -142,8 +144,23 @@ H = fft(h)
     float scale = 1.0 / max;
     
     for(auto & v : H) {
-      v = v * scale;
+      v = v * scale * gain;
     }
+  }
+    
+  
+  void Filter::makeFilter(FilterSpec & filter_spec, 
+			  unsigned int _image_size, 
+			  float gain) {
+    image_size = _image_size;
+    auto num_taps = filter_spec.getTaps();    
+
+    // first create a frequency domain ideal filter:
+    std::vector<std::complex<float>> Hproto(num_taps);
+
+    filter_spec.fillHproto(Hproto);
+
+    makeFilter(Hproto, num_taps, image_size, gain);
   }
 
   void Filter::hammingWindow(std::vector<float> & w) {

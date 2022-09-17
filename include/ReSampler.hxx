@@ -131,6 +131,8 @@ namespace SoDa {
 		   float * out);
 
 
+    void getLxLy(uint32_t & lx, uint32_t & ly) { lx = Lx; ly = Ly; }
+    
     class BadBufferSize : public std::runtime_error {
     public:
       BadBufferSize(const std::string & st, uint32_t got_size, uint32_t should_be_size) :

@@ -42,12 +42,22 @@ target_link_libraries(ReSamplerSweep sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(ReSamplerSweep PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(ReSamplerSweep PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 
+add_executable(HilbertTest HilbertTest.cxx)
+target_link_libraries(HilbertTest sodasignals ${SoDaUtils_LIBRARIES})
+target_link_directories(HilbertTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
+target_include_directories(HilbertTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
+
 
 enable_testing()
 
 add_test(NAME PeriodogramTest_1
   COMMAND $<TARGET_FILE:PeriodogramTest> --fsamp 48e3 -ftest 8e3 --psize 4096)
 set_tests_properties(PeriodogramTest_1 PROPERTIES
+  PASS_REGULAR_EXPRESSION "PASSED")
+
+add_test(NAME HilbertTest
+  COMMAND $<TARGET_FILE:HilbertTest>)
+set_tests_properties(HilbertTest PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
 add_test(NAME ReSamplerTest_1
@@ -76,7 +86,7 @@ set_tests_properties(ReSamplerTest_5 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
 add_test(NAME ReSamplerTest_6
-  COMMAND $<TARGET_FILE:ReSamplerTest> --fsin 1.25e6 --fsout 48e3)
+  COMMAND $<TARGET_FILE:ReSamplerTest> --fsin 1.25e6 --fsout 44.1e3)
 set_tests_properties(ReSamplerTest_6 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
@@ -107,7 +117,7 @@ set_tests_properties(ReSamplerTest_I5 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
 add_test(NAME ReSamplerTest_I6
-  COMMAND $<TARGET_FILE:ReSamplerTest> --fsout 1.25e6 --fsin 48e3)
+  COMMAND $<TARGET_FILE:ReSamplerTest> --fsout 125e6 --fsin 44.1e3)
 set_tests_properties(ReSamplerTest_I6 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
