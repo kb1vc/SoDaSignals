@@ -230,8 +230,20 @@ namespace SoDa {
     return 0;
   }
 
-  uint32_t ReSampler::apply(float * in,
-			    float * out) {
-    return 0;
+  uint32_t ReSampler::apply(std::vector<float> & in,
+			    std::vector<float> & out) {
+    // not exactly optimal, but what were people thinking anyway?
+    std::vector<std::complex<float>> tin(in.size());
+    std::vector<std::complex<float>> tout(out.size());    
+    for(int i = 0; i < in.size(); i++) {
+      tin[i] = std::complex<float>(in[i], 0.0);
+    }
+    apply(tin, tout);
+    for(int i = 0; i < out.size(); i++) {
+      out[i] = tout[i].real();
+    }
+
+    return out.size();
+    
   }
 }

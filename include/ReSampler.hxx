@@ -127,8 +127,8 @@ namespace SoDa {
      * @param in input buffer
      * @param out output buffer
      */
-    uint32_t apply(float * in,
-		   float * out);
+    uint32_t apply(std::vector<float> & in,
+		   std::vector<float> & out);
 
 
     class BadBufferSize : public std::runtime_error {

@@ -39,7 +39,7 @@
 #include <complex>
 #include <vector>
 #include <memory>
-#include "../include/FFT.hxx"
+#include "FFT.hxx"
 
 
 namespace SoDa {

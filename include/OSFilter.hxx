@@ -96,7 +96,8 @@ namespace SoDa {
 
     
     unsigned int getInternalSize() { return x_augmented.size(); }
-    
+
+    std::pair<float,float> getFilterEdges() { return filter_p->getFilterEdges(); }
   protected:
     void makeOSFilter(FilterSpec & filter_spec, 
 		      unsigned int _buffer_size);
