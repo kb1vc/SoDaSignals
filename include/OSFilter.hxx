@@ -104,8 +104,12 @@ namespace SoDa {
     void makeOSFilter(FilterSpec & filter_spec, 
 		      unsigned int _buffer_size);
 
-    // This is used in the hilbert transformer, as its filter shape
-    // is rather strange. 
+    // This might be used in the hilbert transformer, as its filter shape
+    // is rather strange. Though don't go looking for the hilbert transformer
+    // here. I've never been happy with the performance around DC, and
+    // its primary use was in SSB modulation, where I think the filtering
+    // method probably makes much more sense and results in better
+    // sideband and carrier supression. 
     void makeGenericFilter(std::vector<std::complex<float>> & H,
 			   unsigned int num_taps, 
 			   unsigned int buffer_size,

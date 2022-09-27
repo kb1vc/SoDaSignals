@@ -6,7 +6,6 @@ set(SIGNALS_SRCS
 	ReSampler.cxx
 	NCO.cxx
 	OSFilter.cxx
-	Hilbert.cxx
 	)
 
 
