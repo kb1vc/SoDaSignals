@@ -163,6 +163,10 @@ namespace SoDa {
   uint32_t ReSampler::getOutputBufferSize() {
     return Ly - discard_count;
   }
+
+  uint32_t ReSampler::getFilterLength() { 
+    return save_count + 1;
+  }
   
   int apcount = 0; 
   uint32_t ReSampler::apply(std::vector<std::complex<float>> & in,

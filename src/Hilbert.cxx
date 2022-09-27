@@ -76,7 +76,7 @@ namespace SoDa {
       .addI(good_size)
       .addI(Hp.size());
     
-    makeGenericFilter(Hp, Hp.size(), in_buffer_size);
+    makeGenericFilter(Hp, Hp.size(), in_buffer_size, 1.0); // , SoDa::NOWINDOW);
 
     debug_of.open("h_fft.dat");
   }

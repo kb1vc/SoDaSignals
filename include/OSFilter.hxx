@@ -108,8 +108,9 @@ namespace SoDa {
     // is rather strange. 
     void makeGenericFilter(std::vector<std::complex<float>> & H,
 			   unsigned int num_taps, 
-			   unsigned int buffer_size, 
-			   float gain = 1.0);
+			   unsigned int buffer_size,
+			   float gain = 1.0,
+			   WindowChoice window_choice = HAMMING);
     
     uint32_t buffer_size; 
     

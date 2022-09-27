@@ -67,12 +67,14 @@ namespace SoDa {
   void OSFilter::makeGenericFilter(std::vector<std::complex<float>> & H,
 				   unsigned int num_taps, 
 				   unsigned int _buffer_size, 
-				   float gain) {
+				   float gain,
+				   WindowChoice window_choice
+				   ) {
     buffer_size = _buffer_size; 
 
     unsigned int fft_size = buffer_size + num_taps - 1;
     std::cerr << "makeGenericFilter fft_size = " << fft_size << "\n";
-    filter_p = std::unique_ptr<Filter>(new Filter(H, fft_size, gain));
+    filter_p = std::unique_ptr<Filter>(new Filter(H, fft_size, gain, window_choice));
     // now size all the buffers. 
     x_augmented.resize(fft_size);
     y_augmented.resize(fft_size);

@@ -98,6 +98,7 @@ Result testHilbert(SoDa::Hilbert & xform, double freq, double phase, unsigned in
   float angle_incr = freq * M_PI;
   std::vector<float> angles(vlen);
   unsigned int acount = 0; 
+  // std::ofstream test_of("testout.dat");
   // do a number of passes, then check the last one
   for(int b = 0; b < blocks; b++) {
     for(int i = 0; i < vlen; i++) {
@@ -109,7 +110,14 @@ Result testHilbert(SoDa::Hilbert & xform, double freq, double phase, unsigned in
     
     // now do the transform
     xform.apply(test_in, test_out);
+    // for(int i = 0; i < test_in.size(); i++) {
+    //   test_of << test_in[i] << " " << test_out[i].real() << " " << test_out[i].imag() << "\n";
+    // }
   }
+  
+  // test_of.close(); 
+  // std::cerr << "Leaving after writing test_of\n";
+  // exit(-1); 
   
   // first calculate the phase and mag vectors
   std::vector<float> out_phase_diff(vlen);
@@ -123,7 +131,7 @@ Result testHilbert(SoDa::Hilbert & xform, double freq, double phase, unsigned in
   getStats(out_phase_diff, res.phase_diff_mean, res.phase_diff_var);
   getStats(out_mag, res.mag_mean, res.mag_var);
 
-  if((res.phase_diff_var > 0.5)  && freq > 0.3) {
+  if((res.phase_diff_var > 0.5)  && (freq > 0.3) && (freq < 0.9)) {
     std::ofstream of("error.dat");
     for(int i = 0; i < vlen; i++) {
       of << SoDa::Format("%0 %1 %2\n")
@@ -132,7 +140,7 @@ Result testHilbert(SoDa::Hilbert & xform, double freq, double phase, unsigned in
 	.addF(std::arg(test_out[i]));
     }
     of.close();
-    std::cerr << "Ooops  look at error.dat\n";
+    std::cerr << "Ooops  look at error.dat   freq = " << freq << "\n";
     exit(-1);
   }
   return res;
@@ -178,7 +186,7 @@ int main(int argc, char * argv[]) {
       .addF(res.phase_diff_var, 'e');
   }
   else {
-    for(freq = 0.0; freq < 0.999; freq += 0.001327) {
+    for(freq = 0.0; freq < 0.9; freq += 0.001327) {
       Result res = testHilbert(xform, freq, phase, num_blocks);
       std::cout << SoDa::Format("%0 %1 %2  %3  %4\n")      
 	.addF(res.freq, 'e')

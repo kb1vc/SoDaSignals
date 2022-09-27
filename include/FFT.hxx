@@ -58,8 +58,9 @@ namespace SoDa {
 	std::runtime_error(SoDa::Format("Vector arguments to function FFT::%0 must %2 but were %1 instead\n")
 			 .addS(st).addI(was).addI(should_be).str()) { }
     };
-    
-    FFT(unsigned int len); 
+
+    enum FFTOpt { ESTIMATE, MEASURE, EXHAUST, PATIENT };
+    FFT(unsigned int len, FFTOpt opt = ESTIMATE); 
 
     static uint32_t findGoodSize(uint32_t min_size);
     

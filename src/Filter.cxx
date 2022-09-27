@@ -80,14 +80,16 @@ H = fft(h)
   }
 
   Filter::Filter(std::vector<std::complex<float>> & Hproto, 
-		 unsigned int fft_size, float gain) {
-    makeFilter(Hproto, Hproto.size(), fft_size, gain);
+		 unsigned int fft_size, float gain, 
+		 WindowChoice window_choice) {
+    makeFilter(Hproto, Hproto.size(), fft_size, gain, window_choice);
   }
   
   void Filter::makeFilter(std::vector<std::complex<float>> Hproto, 
 			  unsigned int num_taps, 
 			  unsigned int _image_size, 
-			  float gain) {
+			  float gain, 
+			  WindowChoice window_choice) {
     image_size = _image_size;
     std::vector<std::complex<float>> hproto(num_taps);    
 
@@ -105,14 +107,15 @@ H = fft(h)
     pfft.ishift(hproto, hproto);
 
     // now apply a window
-    std::vector<float> window(num_taps);
-    hammingWindow(window);
-    // hannWindow(window);    
-    // blackmanWindow(window);
-    for(int i = 0; i < num_taps; i++) {
-      hproto[i] = hproto[i] * window[i];
+    if(window_choice != NOWINDOW) {
+      std::vector<float> window(num_taps);
+      hammingWindow(window);
+      // hannWindow(window);    
+      // blackmanWindow(window);
+      for(int i = 0; i < num_taps; i++) {
+	hproto[i] = hproto[i] * window[i];
+      }
     }
-
     // so now we have the time domain prototype.
 
     // embed it in the impulse response of the appropriate length
