@@ -112,6 +112,8 @@ namespace SoDa {
     uint32_t getInputBufferSize();
 
     uint32_t getOutputBufferSize();
+    
+    uint32_t getFilterLength();
       
     /**
      * @brief apply the resampler to a buffer of IQ samples.
@@ -131,6 +133,8 @@ namespace SoDa {
 		   std::vector<float> & out);
 
 
+    void getLxLy(uint32_t & lx, uint32_t & ly) { lx = Lx; ly = Ly; }
+    
     class BadBufferSize : public std::runtime_error {
     public:
       BadBufferSize(const std::string & st, uint32_t got_size, uint32_t should_be_size) :

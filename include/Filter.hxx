@@ -60,6 +60,8 @@ namespace SoDa {
     bool time_in;
     bool time_out; 
   };
+
+  enum WindowChoice { NOWINDOW, HAMMING };
   
   class Filter {
   public:
@@ -77,14 +79,22 @@ namespace SoDa {
     /// 
     /// @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
     /// @param image_size the impulse response and frequency image will be this long
-
+    /// @param gain passband gain (max gain) through filter
     Filter(FilterSpec & filter_spec, 
-	   unsigned int image_size); 
+	   unsigned int image_size, 
+	   float gain = 1.0); 
 
     /// Alternate constructor, for very simple filters
     Filter(float low_cutoff, float high_cutoff, float skirt,
-	   float sample_rate, unsigned int taps, unsigned int image_size);
+	   float sample_rate, unsigned int taps, unsigned int image_size, 
+	   float gain = 1.0);
 
+    /// Alternate constructore where we just get the H proto
+    Filter(std::vector<std::complex<float>> & H, 
+	   unsigned int fft_size, 
+	   float gain = 1.0,
+	   WindowChoice window_choice = HAMMING);
+    
     /// run the filter on a complex input stream
     /// @param in_buf the input buffer I/Q samples (complex)
     /// @param out_buf the output buffer I/Q samples (complex)
@@ -128,9 +138,17 @@ namespace SoDa {
     /// 
     /// @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
     /// @param image_size the impulse response and frequency image will be this long
-
+    /// @param gain passband gain (max gain) through filter
     void makeFilter(FilterSpec & filter_spec, 
-		    unsigned int image_size); 
+		    unsigned int image_size, 
+		    float gain = 1.0); 
+
+    void makeFilter(std::vector<std::complex<float>> Hproto, 
+		    unsigned int num_taps, 
+		    unsigned int image_size,
+		    float gain = 1.0, 		    
+		    WindowChoice window_choice = HAMMING); 
+
     
     /// parameters that we keep to support display masks on the spectrogram
     double low_edge, high_edge; 

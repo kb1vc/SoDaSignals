@@ -59,6 +59,36 @@ namespace SoDa {
 		 unsigned int buffer_size) {
     makeOSFilter(filter_spec, buffer_size); 
   }
+
+  OSFilter::OSFilter() {
+    // don't do anything.  We'll set it up in a little while. 
+  }
+  
+  void OSFilter::makeGenericFilter(std::vector<std::complex<float>> & H,
+				   unsigned int num_taps, 
+				   unsigned int _buffer_size, 
+				   float gain,
+				   WindowChoice window_choice
+				   ) {
+    buffer_size = _buffer_size; 
+
+    unsigned int fft_size = buffer_size + num_taps - 1;
+    std::cerr << "makeGenericFilter fft_size = " << fft_size << "\n";
+    filter_p = std::unique_ptr<Filter>(new Filter(H, fft_size, gain, window_choice));
+    // now size all the buffers. 
+    x_augmented.resize(fft_size);
+    y_augmented.resize(fft_size);
+    X.resize(fft_size);
+    Y.resize(fft_size);
+    save_buf.resize(num_taps - 1);
+    real_in.resize(buffer_size);
+    real_in.resize(buffer_size);
+
+    std::cerr << SoDa::Format("fft_size %0 num_taps %1 buffer_size %2\n")
+      .addI(fft_size)
+      .addI(num_taps)
+      .addI(buffer_size);
+  }
   
   void OSFilter::makeOSFilter(FilterSpec & filter_spec, 
 			      unsigned int _buffer_size) {

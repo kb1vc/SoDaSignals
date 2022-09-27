@@ -29,16 +29,34 @@
 #include "FFT.hxx"
 
 namespace SoDa {
-  FFT::FFT(unsigned int len) : len(len) {
+  FFT::FFT(unsigned int len, FFTOpt opt) : len(len) {
     fftwf_set_timelimit(1.0);
+    
+    unsigned int fftw_flag; 
+
+    switch (opt) {
+    case MEASURE:
+      fftw_flag = FFTW_MEASURE;
+      break; 
+    case EXHAUST:
+      fftw_flag = FFTW_EXHAUSTIVE;
+      break; 
+    case PATIENT:
+      fftw_flag = FFTW_PATIENT;
+      break; 
+    case ESTIMATE:
+    default:
+      fftw_flag = FFTW_ESTIMATE; 
+      break; 
+    }
     
     auto f_dummy_in = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * len);
     auto f_dummy_out = (fftwf_complex*) fftwf_malloc(sizeof(fftwf_complex) * len);  
   
     forward_plan = fftwf_plan_dft_1d(len, f_dummy_in, f_dummy_out, 
-				     FFTW_FORWARD, FFTW_MEASURE); // ESTIMATE);
+				     FFTW_FORWARD, fftw_flag);
     backward_plan = fftwf_plan_dft_1d(len, f_dummy_in, f_dummy_out, 
-				      FFTW_BACKWARD, FFTW_MEASURE); // ESTIMATE);
+				      FFTW_BACKWARD, fftw_flag); // ESTIMATE);
 
     fftwf_free(f_dummy_in);
     fftwf_free(f_dummy_out);

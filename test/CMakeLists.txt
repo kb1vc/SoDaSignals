@@ -50,6 +50,7 @@ add_test(NAME PeriodogramTest_1
 set_tests_properties(PeriodogramTest_1 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
+
 add_test(NAME ReSamplerTest_1
   COMMAND $<TARGET_FILE:ReSamplerTest> --fsin 48e3 --fsout 8e3)
 set_tests_properties(ReSamplerTest_1 PROPERTIES
@@ -76,7 +77,7 @@ set_tests_properties(ReSamplerTest_5 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
 add_test(NAME ReSamplerTest_6
-  COMMAND $<TARGET_FILE:ReSamplerTest> --fsin 1.25e6 --fsout 48e3)
+  COMMAND $<TARGET_FILE:ReSamplerTest> --fsin 1.25e6 --fsout 44.1e3)
 set_tests_properties(ReSamplerTest_6 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
@@ -106,10 +107,12 @@ add_test(NAME ReSamplerTest_I5
 set_tests_properties(ReSamplerTest_I5 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
+if(ABSOLUTELY_NUTS)
 add_test(NAME ReSamplerTest_I6
-  COMMAND $<TARGET_FILE:ReSamplerTest> --fsout 1.25e6 --fsin 48e3)
+  COMMAND $<TARGET_FILE:ReSamplerTest> --fsout 125e6 --fsin 44.1e3)
 set_tests_properties(ReSamplerTest_I6 PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
+endif()
 
 
 add_test(NAME OSFilterTest

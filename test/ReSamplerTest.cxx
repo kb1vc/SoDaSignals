@@ -195,6 +195,17 @@ bool testRatio(double fs_in, double fs_out) {
   // first create the resampler sized for 50 mS blocks.
   SoDa::ReSampler resamp(fs_in, fs_out, 0.05); 
 
+  uint32_t lx, ly; 
+  resamp.getLxLy(lx, ly);
+  std::cout << SoDa::Format("Resample %0 to %1 Lx = %2 Ly = %3  Filter len = %4 in size %6 out size %5\n")
+    .addF(fs_in, 'e')
+    .addF(fs_out, 'e')
+    .addI(lx)
+    .addI(ly)
+    .addI(resamp.getFilterLength())
+    .addI(resamp.getOutputBufferSize())
+    .addI(resamp.getInputBufferSize());
+  std::cout.flush();
   
   double fs_lim = std::max(fs_in, fs_out);
   SoDa::NCO nco(fs_in, fs_in * 0.125); // initial setting.
