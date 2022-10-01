@@ -73,7 +73,6 @@ namespace SoDa {
     buffer_size = _buffer_size; 
 
     unsigned int fft_size = buffer_size + num_taps - 1;
-    std::cerr << "makeGenericFilter fft_size = " << fft_size << "\n";
     filter_p = std::unique_ptr<Filter>(new Filter(H, fft_size, gain, window_choice));
     // now size all the buffers. 
     x_augmented.resize(fft_size);
@@ -84,10 +83,6 @@ namespace SoDa {
     real_in.resize(buffer_size);
     real_in.resize(buffer_size);
 
-    std::cerr << SoDa::Format("fft_size %0 num_taps %1 buffer_size %2\n")
-      .addI(fft_size)
-      .addI(num_taps)
-      .addI(buffer_size);
   }
   
   void OSFilter::makeOSFilter(FilterSpec & filter_spec, 
@@ -106,11 +101,6 @@ namespace SoDa {
     uint32_t good_size = FFT::findGoodSize(buffer_size + gtaps);
     // taps are what's left over
     uint32_t taps = good_size - buffer_size + 1;
-    std::cerr << SoDa::Format("Buffer_size %0 good_size %1 taps %2 gtaps %3\n")
-      .addI(buffer_size)
-      .addI(good_size)
-      .addU(taps)
-      .addU(gtaps);
     
     filter_spec.setTaps(taps);
     

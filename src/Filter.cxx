@@ -82,6 +82,7 @@ H = fft(h)
   Filter::Filter(std::vector<std::complex<float>> & Hproto, 
 		 unsigned int fft_size, float gain, 
 		 WindowChoice window_choice) {
+    sample_rate = 1.0; 
     makeFilter(Hproto, Hproto.size(), fft_size, gain, window_choice);
   }
   
@@ -91,10 +92,9 @@ H = fft(h)
 			  float gain, 
 			  WindowChoice window_choice) {
     image_size = _image_size;
+    
     std::vector<std::complex<float>> hproto(num_taps);    
 
-    std::cerr << "Filter::makeFilter H,t,i image_size = " << image_size << "\n";
-    
     // now we've got a frequency domain prototype.
     // first shift it to fit the FFT picture
     FFT pfft(num_taps);
@@ -155,6 +155,7 @@ H = fft(h)
   void Filter::makeFilter(FilterSpec & filter_spec, 
 			  unsigned int _image_size, 
 			  float gain) {
+    sample_rate = filter_spec.getSampleRate();
     image_size = _image_size;
     auto num_taps = filter_spec.getTaps();    
 
@@ -270,5 +271,45 @@ H = fft(h)
 	.addF(h[i].real())
 	.addF(h[i].imag());
     }
+  }
+  
+  std::pair<float, float> Filter::getFilterEdges() {
+    // scan from the bottom and top to find the first
+    // H sample over 0.5
+    int hi, lo;
+    std::vector<float> Himg(H.size());
+    int half_size = H.size() / 2;
+    for(int i = 0; i < H.size(); i++) {
+      int j; 
+      if(i < half_size) {
+	j = half_size + i;
+      }
+      else {
+	j = i - half_size; 
+      }
+      Himg[i] = std::abs(H[j]);
+    }
+    
+    for(int i = 0; i < Himg.size(); i++) {
+      if(std::abs(Himg[i]) > 0.5) {
+	lo = i; 
+	break; 
+      }
+    }
+    for(int i = H.size() - 1; i >= 0; i--) {
+      if(std::abs(Himg[i]) > 0.5) {
+	hi = i; 
+	break; 
+      }
+    }
+    
+
+    float hsize = float(H.size());
+    float f_lo = float(lo);
+    float f_hi = float(hi);
+    float step = sample_rate / hsize;
+    float bottom = -0.5 * sample_rate;
+    auto ret = std::pair<float, float>(bottom + f_lo * step, bottom + f_hi * step);
+    return ret; 
   }
 }

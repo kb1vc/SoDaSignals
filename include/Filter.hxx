@@ -175,6 +175,7 @@ namespace SoDa {
     std::vector<std::complex<float>> temp_out_buf;        
     
     unsigned int image_size; 
+    float sample_rate; 
   };
 }
 

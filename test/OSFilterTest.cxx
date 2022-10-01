@@ -60,9 +60,12 @@ bool test() {
 
   SoDa::OSFilter filt(flo, fhi, skirt, Fs, buflen);
   
-  std::cerr << SoDa::Format("Filter taps %0 fft size %1\n")
+  auto edges = filt.getFilterEdges(); 
+  std::cerr << SoDa::Format("Filter taps %0 fft size %1 edges %2 %3\n")
     .addI(filt.getTaps())
-    .addI(filt.getInternalSize());
+    .addI(filt.getInternalSize())
+    .addF(edges.first, 'e')
+    .addF(edges.second, 'e');
   
   int num_passes = 6;
 

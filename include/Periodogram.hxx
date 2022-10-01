@@ -65,9 +65,9 @@ namespace SoDa {
     void accumulate(const std::vector<std::complex<float>> & in);
 
     /**
-     * @brief return the current accumulated periodogram
+     * @brief return the DC-at-center image of the accumulator
      *
-     * @return a reference to the accumulator
+     * @param res a pointer to a vector that will receive a copy of the accumulator.
      */
     void get(std::vector<float> & res) const;
     
