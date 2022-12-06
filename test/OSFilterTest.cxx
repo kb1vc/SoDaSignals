@@ -14,43 +14,6 @@ float fixAngle(float a) {
   return a; 
 }
 
-int orig() {
-  float Fs = 125e3;
-  float flp = -20e3;
-  float fhp = 40e3;
-
-  uint32_t buflen = 8304; 
-  float skirt = 2e3;
-  float att = 50.0;
-  uint32_t taps = int((Fs / skirt) * (att / 22.0));
-  taps = taps | 1;
-  taps = 337;
-  Fs = 48e3;
-  flp=-2.0e3;
-  fhp = 10e3;
-
-  SoDa::OSFilter filt(flp, fhp, 1e3, Fs, buflen);
-
-  std::cerr << "Taps = " << filt.getTaps() << "\n";
-
-  int num_passes = 4; 
-
-  for(float freq = -Fs / 2; freq < Fs / 2; freq += Fs * 0.01) {
-    SoDa::NCO osc(Fs, freq); 
-    std::vector<std::complex<float>> in(buflen), out(buflen); 
-    for(int i = 0; i < num_passes; i++) {
-      osc.get(in); 
-      filt.apply(in, out);
-
-      std::cout << SoDa::Format("%0 %1 %2 %3\n").addF(freq, 'e').addF(std::abs(in[buflen >> 1]))
-	.addF(std::abs(out[buflen >> 1]))
-	.addF(fixAngle(std::arg(in[buflen >> 1]) - std::arg(out[buflen >> 1])), 'e');
-    }
-    break; 
-  }
-  return 0; 
-}
-
 bool test() {
   double Fs = 48.0e3;
   double flo = -2.0e3;
@@ -80,11 +43,15 @@ bool test() {
 
   for(double freq = -Fs/2 + (Fs/1024); freq < Fs/2; freq += Fs / (1.5 * buflen)) {
     SoDa::Checker::CheckRegion reg; 
-    if((freq > flo + skirt) && (freq < (fhi - skirt))) {
+    if((freq > flo + 0.95 * skirt) && (freq < (fhi - 0.95 * skirt))) {
       reg = SoDa::Checker::PASS_BAND; 
+      std::cerr << SoDa::Format("Test freq %0 flo %1 fhi %2 skirt %3\n")
+	.addF(freq, 'e').addF(flo, 'e').addF(fhi, 'e').addF(skirt, 'e');
     }
-    else if((freq < (flo - skirt)) || (freq > (fhi + skirt))) {
+    else if((freq < (flo - 1.05 * skirt)) || (freq > (fhi + 1.05 * skirt))) {
       reg = SoDa::Checker::STOP_BAND;       
+      std::cerr << SoDa::Format("Test freq %0 flo %1 fhi %2 skirt %3\n")
+	.addF(freq, 'e').addF(flo, 'e').addF(fhi, 'e').addF(skirt, 'e');
     }
     else {
       reg = SoDa::Checker::TRANSITION_BAND;             
@@ -93,17 +60,34 @@ bool test() {
     chk.setFreqAndReset(freq, reg); 
 
     osc.setFreq(freq); 
-  
+
     for(int i = 0; i < num_passes; i++) {
       osc.get(in); 
       filt.apply(in, out); 
       chk.checkResponse(out); 
+      if(i == 2) {
+	// calculate the total power in and out
+	float tot_in = 0.0;
+	float tot_out = 0.0;
+	for(auto v : in) {
+	  auto av = std::abs(v);
+	  tot_in += av * av; 
+	}
+	for(auto v : out) {
+	  auto av = std::abs(v);
+	  tot_out += av * av; 
+	}
+	std::cerr << SoDa::Format("RESP %0 %1 %2\n")
+	  .addF(freq, 'e').addF(tot_in / in.size(), 'e')
+	  .addF(tot_out / out.size(), 'e');
+	  
+      }
     }
     chk.checkFinal(); 
   
     if(!chk.testPassed()) {
       passed = false; 
-      return false; 
+      //      return false; 
     }
   }
   

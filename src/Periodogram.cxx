@@ -32,16 +32,9 @@
 namespace SoDa {
   Periodogram::Periodogram(unsigned int segment_length, float _alpha) : 
     segment_length(segment_length) {
-    alpha = _alpha;     
 
-    if(abs(alpha) < 1e-20) {
-      alpha = 1.0; 
-      beta = 1.0; 
-    }
-    else {
-      beta = 1.0 - alpha;
-    }
-
+    setAlpha(_alpha);
+    
     fft_scale = 1.0 / double(segment_length);
     
     acc_buffer.resize(segment_length);
@@ -80,9 +73,20 @@ namespace SoDa {
 
     auto avg_win_mag = sum_mag / double(segment_length);
     
-    fft_scale = fft_scale / avg_win_mag; 
+    // fft_scale = fft_scale / avg_win_mag; 
     
     clear();
+  }
+
+  void Periodogram::setAlpha(const float _alpha) {
+    alpha = abs(_alpha);     
+
+    if(abs(alpha) < 1e-20) {
+      alpha = 0.1; 
+    }
+    beta = 1.0 - alpha;
+
+    std::cerr << "Alpha is now " << alpha << " Beta is " << beta << "\n";
   }
 
   void Periodogram::accumulate(const std::vector<std::complex<float>> & in) {

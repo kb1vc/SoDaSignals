@@ -208,13 +208,17 @@ namespace SoDa {
     int peak_bucket = 0;
     float peak_amp = 0.0;
     for(auto v : pdg_out) {
+      
       if(std::abs(v) > peak_amp) {
 	peak_amp = std::abs(v); 
 	peak_bucket = bucket; 
       }
       bucket++; 
     }
-    
+   using the periodogram to test for magnitude/total power is a bad idea.
+						 
+    std::cerr << SoDa::Format("PB %0 %1\n").addF(cur_freq, 'e').addF(20 * std::log10(peak_amp));
+
     // is the peak near us?
     int correct_bucket = int((cur_freq + (sample_freq / 2))  / bucket_size + 0.5); 
     if(std::abs(peak_bucket - correct_bucket) > 1) {
@@ -234,6 +238,7 @@ namespace SoDa {
     if(check_region == PASS_BAND) {
       if((peak_amp < 0.8) || (peak_amp > 1.2)) { // more than 1dB ripple
 	if(test_passed) {
+	  // only print on the first failure. 
 	  std::cerr << SoDa::Format("Bad pass band response found  bucket %0 (cor %3) freq %1  mag was %2 dB\n")
 	    .addI(peak_bucket)
 	    .addF(bucketToFreq(cor_peak_bucket), 'e')

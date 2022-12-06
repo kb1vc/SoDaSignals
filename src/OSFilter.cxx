@@ -81,8 +81,7 @@ namespace SoDa {
     Y.resize(fft_size);
     save_buf.resize(num_taps - 1);
     real_in.resize(buffer_size);
-    real_in.resize(buffer_size);
-
+    real_out.resize(buffer_size);
   }
   
   void OSFilter::makeOSFilter(FilterSpec & filter_spec, 
@@ -112,14 +111,14 @@ namespace SoDa {
     Y.resize(good_size);
     save_buf.resize(taps - 1);
     real_in.resize(buffer_size);
-    real_in.resize(buffer_size);
+    real_out.resize(buffer_size);
   }
 
 
   unsigned int OSFilter::apply(std::vector<std::complex<float>> & in_buf, 
 			       std::vector<std::complex<float>> & out_buf) {
     if((in_buf.size() != buffer_size) || (out_buf.size() != buffer_size)) {
-      throw BadBufferSize("apply", in_buf.size(), out_buf.size(), buffer_size); 
+      throw BadBufferSize("applyVCF", in_buf.size(), out_buf.size(), buffer_size); 
     }
     
     // copy from the end of x_augmented to the start
@@ -146,7 +145,7 @@ namespace SoDa {
   unsigned int OSFilter::apply(std::vector<float> & in_buf, 
 			       std::vector<float> & out_buf) {
     if((in_buf.size() != buffer_size) || (out_buf.size() != buffer_size)) {
-      throw BadBufferSize("apply", in_buf.size(), out_buf.size(), buffer_size); 
+      throw BadBufferSize("applyVF", in_buf.size(), out_buf.size(), buffer_size); 
     }
 
     for(int i = 0; i < in_buf.size(); i++) {

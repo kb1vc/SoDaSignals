@@ -58,6 +58,14 @@ namespace SoDa {
     Periodogram(unsigned int segment_length, float alpha = 0.0); 
 
     /**
+     * @brief set the accumulation factor
+     * 
+     * @param alpha if zero, add each segment's contribution to the accumulated result. 
+     * otherwise acc = alpha * acc + (1 - alpha) * contrib     
+     */
+    void setAlpha(const float alpha); 
+    
+    /**
      * @brief add the input buffer's spectrum to the accumulated spectrum. 
      * 
      * @param in the input vector. This need not be a multiple of the segment_length
