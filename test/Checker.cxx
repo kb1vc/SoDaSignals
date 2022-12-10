@@ -215,7 +215,8 @@ namespace SoDa {
       }
       bucket++; 
     }
-   using the periodogram to test for magnitude/total power is a bad idea.
+    std::cerr << "using the periodogram to test for magnitude/total power is a bad idea.\n";
+    exit(-1);
 						 
     std::cerr << SoDa::Format("PB %0 %1\n").addF(cur_freq, 'e').addF(20 * std::log10(peak_amp));
 
