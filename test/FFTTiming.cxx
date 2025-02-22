@@ -92,6 +92,8 @@ void doTest(int size, SoDa::FFT::FFTOpt opt_flag) {
   auto idur = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start).count();
 
   double dur = (double) idur; 
+
+  double vdur = dur / ((double) (2 * iters));
   
   // duration in ns dur
 
@@ -100,7 +102,7 @@ void doTest(int size, SoDa::FFT::FFTOpt opt_flag) {
 
   std::cout << SoDa::Format("%0 %1 %2 %3\n")
     .addI(size)
-    .addF(dur * 1e-9, 'e', 4, 4)
+    .addF(vdur * 1e-9, 'e', 4, 4)
     .addF(ns_p_p * 1e-9, 'e', 4, 4)
     .addF(create_time, 'e', 4, 4);
 				       
