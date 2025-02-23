@@ -122,14 +122,17 @@ namespace SoDa {
   double Checker::getFreq(uint32_t idx) { return frequencies[idx]; }
   
   void Checker::checkResponse(
-		       uint32_t freq_step,
-		       std::function<CheckRegion(double)> freqRegion, 
-		       std::function<void(std::vector<std::complex<float>> &,
-					  std::vector<std::complex<float>>& )> filt) {
-
+			      uint32_t freq_step,
+			      std::function<CheckRegion(double)> freqRegion, 
+			      std::function<void(std::vector<std::complex<float>> &,
+						 std::vector<std::complex<float>>& )> filt,
+			      std::vector<float> & gainv,
+			      std::vector<float> & phasev) {
+    
     // run the filter
     // twice
     std::vector<std::complex<float>> test_out(buffer_length);
+    std::vector<float> freq_resp(second_oscillators.size());
     
     filt(first_oscillators[freq_step], test_out);
     // call it again
@@ -144,13 +147,15 @@ namespace SoDa {
       ; 
 
 
-    
+
     // now calculate the correlation for each frequency
     for(int i = 0; i < second_oscillators.size(); i++) {
       // do the correlation for this frequency
       auto corr = SoDa::correlate(test_out, second_oscillators[i]);
       float gain = 10.0 * std::log10(std::abs(corr));
       float phase_shift = std::arg(corr);
+      gainv[i] = gain;
+      phasev[i] = phase_shift;
       if((check_region == PASS_BAND) && (i == freq_step)) {
 	//	std::cerr << "BANG  " << frequencies[i] << " " <<  phase_shift << "\n";
 	// if we're in the passband, and at the same
@@ -163,32 +168,36 @@ namespace SoDa {
 	  // we're out of the passband gain.
 	  if(1 || test_passed) {
 	    // we're the first failure.
-	    std::cerr << SoDa::Format("Passband Gain out-of-range Frequency %0 gain %1 ripple limit %2 index %3 \n")
+	    std::cerr << SoDa::Format("Passband Gain for %4 out-of-range Frequency %0 gain %1 ripple limit %2 index %3 \n")
 	      .addF(frequencies[i], 'e')
 	      .addF(10 * std::log10(gain))
 	      .addF(ripple_limit_dB)
 	      .addI(i)
+	      .addF(frequencies[freq_step])	      
 	      ;
-	    dump2CVec("ripple_fail.dat", test_out, second_oscillators[i]);	    
+	    if(test_passed) dump2CVec("ripple_fail.dat", test_out, second_oscillators[i]);	    
 	  }
 
 	  test_passed = false;
 	}
 
 	target_phase_shift = phase(frequencies[i]);
+	auto phase_diff = abs(phase_shift - target_phase_shift);
+	while(phase_diff >= M_PI) phase_diff = phase_diff - M_PI;
 	
 	if(abs(phase_shift - target_phase_shift) > permissible_phase_error) {
 	  // the delay through the filter is wrong. 
 	  if(1 || test_passed) {
 	    // we're the first failure.
-	    std::cerr << SoDa::Format("Passband shift out-of-range Frequency %0 shift %1 target %2 index %3 \n")
+	    std::cerr << SoDa::Format("Passband shift for %4 out-of-range Frequency %0 shift %1 target %2 index %3 \n")
 	      .addF(frequencies[i], 'e')
 	      .addF(phase_shift)
 	      .addF(target_phase_shift)
 	      .addI(i)
+	      .addF(frequencies[freq_step])
 	      ;
 	      
-	    dump2CVec("phase_fail.dat", test_out, second_oscillators[i]);	  	    
+	    if(test_passed) dump2CVec("phase_fail.dat", test_out, second_oscillators[i]);	  	    
 	  }
 
 	  test_passed = false;
@@ -203,13 +212,14 @@ namespace SoDa {
 	// in all cases we should be at the stopband level. 
 	if(gain > stopband_gain_dB) {
 	  if(1 || test_passed) {
-	    std::cerr << SoDa::Format("Stopband gain exceeds passband limit, Frequency %0 gain %1 target %2 index = %3 \n")
+	    std::cerr << SoDa::Format("Stopband gain for %4 exceeds passband limit, Frequency %0 gain %1 target %2 index = %3 \n")
 	      .addF(frequencies[i], 'e')
 	      .addF(gain)
 	      .addF(stopband_gain_dB)
 	      .addI(i)
+	      .addF(frequencies[freq_step])
 	      ;
-	    dump2CVec("stopband_fail.dat", test_out, second_oscillators[i]);	  	  	    
+	    if(test_passed) { dump2CVec("stopband_fail.dat", test_out, second_oscillators[i]); }
 	  }
 
 	  test_passed = false; 
@@ -220,6 +230,8 @@ namespace SoDa {
 	// anything goes
       }
     }
+    
+    
     return; 
   }
 }

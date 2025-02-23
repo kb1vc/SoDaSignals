@@ -86,7 +86,7 @@ namespace SoDa {
 
     /// Alternate constructor, for very simple filters
     Filter(float low_cutoff, float high_cutoff, float skirt,
-	   float sample_rate, unsigned int taps, unsigned int image_size, 
+	   float sample_rate, unsigned int image_size, 
 	   float gain = 1.0);
 
     /// Alternate constructore where we just get the H proto

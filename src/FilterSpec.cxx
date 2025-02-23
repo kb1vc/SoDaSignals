@@ -30,15 +30,21 @@
 #include <cmath>
 
 namespace SoDa {
-  FilterSpec::FilterSpec(float sample_rate, unsigned int taps, FType filter_type) :
-    sorted(false), filter_type(filter_type), taps(taps), sample_rate(sample_rate)
+  FilterSpec::FilterSpec(float sample_rate, unsigned int taps, 
+			 FType filter_type
+			 ) :
+    sorted(false), filter_type(filter_type), taps(taps), sample_rate(sample_rate),
+    stop_band_attenuation(40.0)
   {
   }
 
-  FilterSpec::FilterSpec(float sample_rate, unsigned int taps, float low_cutoff, float high_cutoff, 
+  FilterSpec::FilterSpec(float sample_rate, float low_cutoff, float high_cutoff, 
 			 float skirt_width, 
-			 FType filter_type) :
-    sorted(false), filter_type(filter_type), taps(taps), sample_rate(sample_rate)
+			 FType filter_type,
+			 float stop_band_attenuation) :
+    sorted(false), filter_type(filter_type), 
+    sample_rate(sample_rate),
+    stop_band_attenuation(stop_band_attenuation)
   {
     int lo_idx = indexHproto(low_cutoff); 
     int hi_idx = indexHproto(high_cutoff);
@@ -76,8 +82,7 @@ namespace SoDa {
     }
     
     // now use fred harris's rule for the number of filter taps?
-    // assume 40 dB stop band attenuation
-    float ftaps = sample_rate * 40 / (min_interval * 22);
+    float ftaps = sample_rate * stop_band_attenuation / (min_interval * 22);
 
     unsigned int comp_taps = 2 * int(ftaps / 2) + 1; // make sure it is odd
 

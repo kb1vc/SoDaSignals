@@ -72,7 +72,8 @@ namespace SoDa {
 
     /// Alternate constructor, for very simple filters
     OSFilter(float low_cutoff, float high_cutoff, float skirt,
-	     float sample_rate, unsigned int buffer_size);
+	     float sample_rate, unsigned int buffer_size,
+	     float stop_band_attenuation = 60.0);
 
     /// Some subclasses of OSFilter don't have much to say
     /// at construction time. 

@@ -36,35 +36,22 @@ namespace SoDa {
 
   
   OSFilter::OSFilter(float low_cutoff, float high_cutoff, float skirt, 
-		 float sample_rate, unsigned int buffer_size) {
+		     float sample_rate, unsigned int buffer_size, 
+		     float stop_band_attenuation) {
 
-    // taps will be something like 2 * sample_rate / skirt  + odd;
-    uint32_t bgtaps = int((2 * sample_rate / skirt));
-    // no, more like
-    float stopband_atten = 40;
-    uint32_t gtaps = int((stopband_atten * sample_rate / (22.0 * skirt)));
-    // add 4 and make gtaps even (for a reason.)
-    gtaps = (gtaps + 4) & ~0x1;
-    // find a good FFT size
-    uint32_t good_size = FFT::findGoodSize(buffer_size + gtaps);
-    // taps are what's left over
-    uint32_t taps = good_size - buffer_size + 1;
 
-    std::cerr << SoDa::Format("taps est1 %0 est 2 %1 actual %2 good size %3 buffer size %4\n")
-      .addI(bgtaps)
-      .addI(gtaps)
-      .addI(taps)
-      .addI(good_size)
+
+    
+    FilterSpec fspec(sample_rate, low_cutoff, high_cutoff, skirt,
+		     FilterSpec::COMPLEX,
+		     stop_band_attenuation);
+
+    std::cerr << SoDa::Format("taps %0   buffer size %1\n")
+      .addI(fspec.getTaps())
       .addI(buffer_size)
       ; 
 
     
-    FilterSpec fspec(sample_rate, gtaps);
-    fspec
-      .add(low_cutoff, 1.0)
-      .add(high_cutoff + skirt * 0.5, 0.0);
-
-    fspec.setTaps(taps);
     makeOSFilter(fspec, buffer_size); 
   }
 

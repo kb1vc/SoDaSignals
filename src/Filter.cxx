@@ -64,11 +64,11 @@ H = fft(h)
   }
   
   Filter::Filter(float low_cutoff, float high_cutoff, float skirt, 
-		 float sample_rate, unsigned int taps,
+		 float sample_rate, 
 		 unsigned int image_size, 
 		 float gain) {
     
-    FilterSpec fspec(sample_rate, taps, low_cutoff, high_cutoff, skirt);
+    FilterSpec fspec(sample_rate, low_cutoff, high_cutoff, skirt);
     
     makeFilter(fspec, image_size, gain);
   }
@@ -109,9 +109,9 @@ H = fft(h)
     // now apply a window
     if(window_choice != NOWINDOW) {
       std::vector<float> window(num_taps);
-      hammingWindow(window);
-      // hannWindow(window);    
-      // blackmanWindow(window);
+      //hammingWindow(window);
+      hannWindow(window);    // gives the best adjacent frequency rejection
+      //blackmanWindow(window);
       for(int i = 0; i < num_taps; i++) {
 	hproto[i] = hproto[i] * window[i];
       }

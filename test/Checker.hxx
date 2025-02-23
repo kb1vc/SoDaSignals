@@ -49,7 +49,9 @@ namespace SoDa {
     void checkResponse(uint32_t freq_step,
 		       std::function<CheckRegion(double)> freqRegion, 
 		       std::function<void(std::vector<std::complex<float>> &,
-					  std::vector<std::complex<float>> &)> filt);
+					  std::vector<std::complex<float>> &)> filt,
+		       std::vector<float> & gainv,
+		       std::vector<float> & phasev);
         
     bool testPassed() { return test_passed; }
 
