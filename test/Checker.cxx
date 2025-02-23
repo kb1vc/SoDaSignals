@@ -69,200 +69,158 @@ namespace SoDa {
     dumpFVec(of, a); 
     of.close();
   }
+
+  double Checker::phase(double freq) {
+    double phi = (freq / sample_freq) * (double(num_taps) + 1) * M_PI;
+
+    phi = fmod(phi, 2.0 * M_PI);
+    if(phi > M_PI) {
+      phi = phi - 2.0 * M_PI; 
+    }
+
+    return phi;
+  }
   
-  Checker::Checker(double sample_freq, uint32_t num_buckets) : 
-    sample_freq(sample_freq), num_buckets(num_buckets) {
-    pass_count = 0; 
-    ref_nco.setSampleRate(sample_freq); 
-    pdg_p = new SoDa::Periodogram(num_buckets); 
+  Checker::Checker(double sample_freq, uint32_t filter_length, 
+		   double ripple_limit_dB, double stopband_atten_dB, 
+		   double permissible_phase_error,
+		   uint32_t buffer_length,
+		   uint32_t num_taps, 
+		   uint32_t freq_steps) :
+    sample_freq(sample_freq), filter_length(filter_length), 
+    ripple_limit_dB(ripple_limit_dB),
+    stopband_gain_dB(-stopband_atten_dB),
+    permissible_phase_error(permissible_phase_error),
+    buffer_length(buffer_length),
+    num_taps(num_taps) 
+  {
+    
+    ref_nco.setSampleRate(sample_freq);
+
+    
     test_passed = true;
+
+    // setup the oscillators
+    first_oscillators.resize(freq_steps);
+    second_oscillators.resize(freq_steps);    
+    frequencies.resize(freq_steps);
+    double freq_step_size = sample_freq / double(freq_steps);
+    for(int i = 0; i < freq_steps; i++) {
+      frequencies[i] = double(i) * freq_step_size - 0.5 * sample_freq;
+      ref_nco.setFreq(frequencies[i]);
+      first_oscillators[i].resize(buffer_length);
+      ref_nco.get(first_oscillators[i]);
+      second_oscillators[i].resize(buffer_length);
+      ref_nco.get(second_oscillators[i]);
+    }
   }
+
+  uint32_t Checker::getNumFreqSteps() {
+    return first_oscillators.size();
+  }
+
+  double Checker::getFreq(uint32_t idx) { return frequencies[idx]; }
   
-  uint32_t Checker::getNumBuckets() { return num_buckets; }
+  void Checker::checkResponse(
+		       uint32_t freq_step,
+		       std::function<CheckRegion(double)> freqRegion, 
+		       std::function<void(std::vector<std::complex<float>> &,
+					  std::vector<std::complex<float>>& )> filt) {
 
-  double Checker::getBucketWidth() { return sample_freq / double(num_buckets); }
-
-  void Checker::setFreqAndReset(double freq, CheckRegion reg) {
-    ref_nco.setFreq(freq); 
-    pdg_p->clear();
-    pass_count = 0; 
-    sample_count = 0;
-    test_passed = true; 
-    check_region = reg;
-    cur_freq = freq; 
-  }
-
-  void Checker::checkResponse(const CVec & data) {
+    // run the filter
+    // twice
+    std::vector<std::complex<float>> test_out(buffer_length);
     
-    // cycle the NCO
-    std::vector<std::complex<float>> osc(data.size());
-    ref_nco.get(osc);
+    filt(first_oscillators[freq_step], test_out);
+    // call it again
+    filt(second_oscillators[freq_step], test_out);
+
+    auto check_region = freqRegion(frequencies[freq_step]);
     
-    sample_count += data.size(); 
-    pass_count++;
-    if(pass_count < 2) return;
+    std::cerr << SoDa::Format("test freq %0  idx %1 reg %2\n")
+      .addF(frequencies[freq_step], 'e')
+      .addI(freq_step)
+      .addI(int(check_region))
+      ; 
 
-    // add to the periodogram 
-    pdg_p->accumulate(data); 
 
-
-    if((pass_count == 2) && (check_region == PASS_BAND)){
-      // do the phase alignment, but only if we are in the passband. 
-      float ang = std::arg(data[data.size() - 10]);
-      float ref_ang = std::arg(osc[data.size() - 10]);
-      // align the reference oscilator
-      float nco_ang = ref_nco.getAngle();// + ref_nco.getAngleIncr();;
-      float ang_cor = ang - ref_ang;
-      ref_nco.setAngle(fixAngle(nco_ang + ang_cor));
-      return;
-    }
-
-    auto ai = ref_nco.getAngleIncr();
-
-    // do the phase checks
-    if(check_region == PASS_BAND) {
-      for(int i = 0; i < data.size(); i++) {
-	float ang_in = std::arg(data[i]);
-	float ang_ref = std::arg(osc[i]);
-	float diff = std::abs(ang_in - ang_ref); 
-	fixAngle(diff); 
-	float target = std::abs(ai) * 0.1;
-	bool is_ok = (diff < ai) || 
-	  ((std::abs(diff) - (2 * M_PI)) < ai);
-	if(!is_ok) {
-	  if(test_passed) {
-	    // we're the cause for the first failure. 
-	    std::cerr << SoDa::Format("Bad inband phase at freq %0, index %1 diff %2 target %3 ang_in %4 ang_ref %5\n")
-	      .addF(cur_freq, 'e')
-	      .addI(i)
-	      .addF(diff, 'e')
-	      .addF(std::abs(ai) * 0.1)
-	      .addF(ang_in)
-	      .addF(ang_ref); 
-	    dump2CVec("PhaseFailure.dat", data, osc);
-	  }
-	  test_passed = false; 
-	}
-      }
-    }
-
-    return; 
-  }
-
-  double Checker::bucketToFreq(uint32_t bucket) {
-    int psize = int(pdg_p->getSize());
-    int bkt = int(bucket);
     
-    double bucket_width = sample_freq / double(psize);
-    double ret =  double(bkt - (psize / 2)) * bucket_width; 
-    std::cerr << SoDa::Format("bucket %0 bw = %1 ret %2 pdg size %3\n")
-      .addI(bkt)
-      .addF(bucket_width, 'e')
-      .addF(ret, 'e')
-      .addI(psize);
-    return ret; 
-  }
-
-  void Checker::checkFinal() {
-    // now we do all the check against the periodogram
-
-    // frequency in the passband? is it correct? is the phase good?
-    // find the peak
-    
-    std::vector<float> pdg_out;
-    pdg_p->get(pdg_out); 
-    auto pdg_sf = pdg_p->getScaleFactor();
-    for(auto & v : pdg_out) {
-      v = v * pdg_sf;
-    }
-
-    double bucket_size = sample_freq / pdg_out.size();
-    
-    // in the stop band?  is everybody below the threshold?
-    if(check_region == STOP_BAND) {
-      // is everybody below -40 dB?
-      // that would be 1e-20 in abs magnitude
-      int bucket = 0; 
-      for(auto v : pdg_out) {
-	if(std::log10(std::abs(v)) > -2.0) {
-	  if(test_passed) {
-	    // we're the cause for the first failure. 
-	    std::cerr << SoDa::Format("Bad out-of-band power spike! at bucket %0 (freq %1) power %2 (%3 dB)\n")
-	      .addI(bucket)	      
-	      .addF(bucketToFreq(bucket), 'e')
-	      .addF(std::abs(v), 'e')
-	      .addF(20.0 * std::log10(std::abs(v)), 'e');
-
-	    dumpFVec("MagnitudeFailure.dat", pdg_out);
-	  }
-	  test_passed = false; 
-	}
-	bucket++; 
-      }
-      return;
-    }
-
-    // otherwise we're in the passband or transition band.
-    // find the peak and make sure it is us. 
-    int bucket = 0; 
-    int peak_bucket = 0;
-    float peak_amp = 0.0;
-    for(auto v : pdg_out) {
+    // now calculate the correlation for each frequency
+    for(int i = 0; i < second_oscillators.size(); i++) {
+      // do the correlation for this frequency
+      auto corr = SoDa::correlate(test_out, second_oscillators[i]);
+      float gain = 10.0 * std::log10(std::abs(corr));
+      float phase_shift = std::arg(corr);
+      if((check_region == PASS_BAND) && (i == freq_step)) {
+	//	std::cerr << "BANG  " << frequencies[i] << " " <<  phase_shift << "\n";
+	// if we're in the passband, and at the same
+	// frequency as the input, then we need to check
+	// the ripple. 
       
-      if(std::abs(v) > peak_amp) {
-	peak_amp = std::abs(v); 
-	peak_bucket = bucket; 
-      }
-      bucket++; 
-    }
-    std::cerr << "using the periodogram to test for magnitude/total power is a bad idea.\n";
-    exit(-1);
-						 
-    std::cerr << SoDa::Format("PB %0 %1\n").addF(cur_freq, 'e').addF(20 * std::log10(peak_amp));
+	// is the attenuation/gain less than threshold?
 
-    // is the peak near us?
-    int correct_bucket = int((cur_freq + (sample_freq / 2))  / bucket_size + 0.5); 
-    if(std::abs(peak_bucket - correct_bucket) > 1) {
-      if(test_passed) {
-	std::cerr << SoDa::Format("Bad peak frequency found at bucket %0 freq %1  should be %2 freq %3\n")
-	  .addI(peak_bucket)
-	  .addF(bucketToFreq(peak_bucket), 'e')
-	  .addI(correct_bucket)
-	  .addF(cur_freq, 'e');
-	dumpFVec("FrequencyFailure.dat", pdg_out);
-	test_passed = false; 
-      }
-    }
+	if((gain < -ripple_limit_dB) && (gain > ripple_limit_dB)) {
+	  // we're out of the passband gain.
+	  if(1 || test_passed) {
+	    // we're the first failure.
+	    std::cerr << SoDa::Format("Passband Gain out-of-range Frequency %0 gain %1 ripple limit %2 index %3 \n")
+	      .addF(frequencies[i], 'e')
+	      .addF(10 * std::log10(gain))
+	      .addF(ripple_limit_dB)
+	      .addI(i)
+	      ;
+	    dump2CVec("ripple_fail.dat", test_out, second_oscillators[i]);	    
+	  }
 
-    int cor_peak_bucket = peak_bucket - (pdg_out.size() / 2);
-    // in the transition band? Are we below 0dB? 
-    if(check_region == PASS_BAND) {
-      if((peak_amp < 0.8) || (peak_amp > 1.2)) { // more than 1dB ripple
-	if(test_passed) {
-	  // only print on the first failure. 
-	  std::cerr << SoDa::Format("Bad pass band response found  bucket %0 (cor %3) freq %1  mag was %2 dB\n")
-	    .addI(peak_bucket)
-	    .addF(bucketToFreq(cor_peak_bucket), 'e')
-	    .addF(std::log10(std::abs(peak_amp)) * 20.0, 'e')
-	    .addI(cor_peak_bucket);	  
-	  dumpFVec("PassBandFailure.dat", pdg_out);
+	  test_passed = false;
+	}
+
+	target_phase_shift = phase(frequencies[i]);
+	
+	if(abs(phase_shift - target_phase_shift) > permissible_phase_error) {
+	  // the delay through the filter is wrong. 
+	  if(1 || test_passed) {
+	    // we're the first failure.
+	    std::cerr << SoDa::Format("Passband shift out-of-range Frequency %0 shift %1 target %2 index %3 \n")
+	      .addF(frequencies[i], 'e')
+	      .addF(phase_shift)
+	      .addF(target_phase_shift)
+	      .addI(i)
+	      ;
+	      
+	    dump2CVec("phase_fail.dat", test_out, second_oscillators[i]);	  	    
+	  }
+
+	  test_passed = false;
+	}
+      }  // end check region PASS_BAND and on the test frequency
+      else if((check_region == PASS_BAND) ||
+	      (check_region == STOP_BAND) || 
+	      ((check_region == TRANSITION_BAND) && (i != freq_step))) {
+	// either we're in the passband but at a different test frequency
+	// or in the stop band. 
+	// or in the skirt and on a different frequency
+	// in all cases we should be at the stopband level. 
+	if(gain > stopband_gain_dB) {
+	  if(1 || test_passed) {
+	    std::cerr << SoDa::Format("Stopband gain exceeds passband limit, Frequency %0 gain %1 target %2 index = %3 \n")
+	      .addF(frequencies[i], 'e')
+	      .addF(gain)
+	      .addF(stopband_gain_dB)
+	      .addI(i)
+	      ;
+	    dump2CVec("stopband_fail.dat", test_out, second_oscillators[i]);	  	  	    
+	  }
+
 	  test_passed = false; 
 	}
       }
-    }
-    else {
-      // must be transition. 
-      if(peak_amp > 1.0) {
-	if(test_passed) {
-	  std::cerr << SoDa::Format("Bad transition band response found  bucket %0 freq %1  mag was %2 dB\n")
-	    .addI(peak_bucket)
-	    .addF(bucketToFreq(peak_bucket), 'e')
-	    .addF(std::log10(std::abs(peak_amp) * 20.0), 'e');
-	  dumpFVec("TransitionBandFailure.dat", pdg_out);
-	  test_passed = false; 
-	}
+      else {
+	// we're on the skirts.
+	// anything goes
       }
     }
+    return; 
   }
 }
 

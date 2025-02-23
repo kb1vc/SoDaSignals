@@ -28,40 +28,56 @@
 */
 #include <vector>
 #include <complex>
+#include <functional>
 #include "../include/Periodogram.hxx"
 #include "../include/NCO.hxx"
+#include "../include/Utilities.hxx"
 
 namespace SoDa {
   typedef std::vector<std::complex<float>> CVec; 
   class Checker {
   public:
-    Checker(double sample_freq, uint32_t num_buckets = 2048);
+    Checker(double sample_freq, uint32_t filter_length, 
+	    double ripple_limit_db, double stopband_atten, 
+	    double permissible_phase_error,
+	    uint32_t buffer_length,
+	    uint32_t num_taps,
+	    uint32_t freq_steps = 1024);
     
     enum CheckRegion { STOP_BAND, PASS_BAND, TRANSITION_BAND };
 
-    void setFreqAndReset(double freq, CheckRegion region); 
+    void checkResponse(uint32_t freq_step,
+		       std::function<CheckRegion(double)> freqRegion, 
+		       std::function<void(std::vector<std::complex<float>> &,
+					  std::vector<std::complex<float>> &)> filt);
+        
+    bool testPassed() { return test_passed; }
 
-    void checkResponse(const CVec & data);
+    uint32_t getNumFreqSteps();
     
-    void checkFinal();
-    
-    bool testPassed() { return test_passed && (sample_count > 32 * 1024); }
+    double getFreq(uint32_t freq_step); 
 
-    uint32_t getNumBuckets();
-
-    double getBucketWidth();
 
   protected:
-    double bucketToFreq(uint32_t bucket);
+    double phase(double freq);
     
-    uint32_t num_buckets; 
-    CheckRegion check_region; 
-    double cur_freq;
-    double sample_freq; 
-    int pass_count;
-    uint32_t sample_count; 
-    SoDa::Periodogram * pdg_p;
+    uint32_t filter_length;
+    double permissible_phase_error;
+    double target_phase_shift;
+    double ripple_limit_dB;
+    double stopband_gain_dB;
+    double threshold_min, threshold_max;
+    uint32_t buffer_length; 
+    
+    CheckRegion check_region;    
+
+    double sample_freq;
+    uint32_t num_taps; 
+    
     bool test_passed; 
-    NCO ref_nco; 
+    NCO ref_nco;
+
+    std::vector<double> frequencies;
+    std::vector<std::vector<std::complex<float>>> first_oscillators, second_oscillators; 
   };
 }
