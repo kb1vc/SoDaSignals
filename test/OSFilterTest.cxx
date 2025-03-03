@@ -22,7 +22,7 @@ SoDa::Checker::CheckRegion getRegion(double freq, double flo, double fhi, double
     // std::cerr << SoDa::Format("Test freq %0 flo %1 fhi %2 skirt %3\n")
     //   .addF(freq, 'e').addF(flo, 'e').addF(fhi, 'e').addF(skirt, 'e');
   }
-  else if((freq < (flo - 1.1 * skirt)) || (freq > (fhi + 1.1 * skirt))) {
+  else if((freq < (flo - 1.2 * skirt)) || (freq > (fhi + 1.2 * skirt))) {
     reg = SoDa::Checker::STOP_BAND;       
     // std::cerr << SoDa::Format("Test freq %0 flo %1 fhi %2 skirt %3\n")
     //   .addF(freq, 'e').addF(flo, 'e').addF(fhi, 'e').addF(skirt, 'e');

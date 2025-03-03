@@ -104,6 +104,11 @@ namespace SoDa {
     filter_spec.setTaps(taps);
     
     filter_p = std::unique_ptr<Filter>(new Filter(filter_spec, good_size));
+    std::cerr << "opening dump file\n";
+    std::ofstream os("H.dat");
+    filter_p->dump(os);
+    os.close();
+    
     // now size all the buffers. 
     x_augmented.resize(good_size);
     y_augmented.resize(good_size);

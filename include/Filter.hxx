@@ -78,15 +78,17 @@ namespace SoDa {
     /// Build the filter from a filter spec for a bandpass filter
     /// 
     /// @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
-    /// @param image_size the impulse response and frequency image will be this long
+    /// @param buffer_size the impulse response and frequency image will be this long
     /// @param gain passband gain (max gain) through filter
     Filter(FilterSpec & filter_spec, 
-	   unsigned int image_size, 
+	   unsigned int buffer_size, 
 	   float gain = 1.0); 
 
     /// Alternate constructor, for very simple filters
     Filter(float low_cutoff, float high_cutoff, float skirt,
-	   float sample_rate, unsigned int image_size, 
+	   float sample_rate,
+	   unsigned int num_taps,
+	   unsigned int buffer_size, 
 	   float gain = 1.0);
 
     /// Alternate constructore where we just get the H proto
@@ -137,15 +139,15 @@ namespace SoDa {
     /// for all forms of Filter constructors. 
     /// 
     /// @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
-    /// @param image_size the impulse response and frequency image will be this long
+    /// @param buffer_size the impulse response and frequency image will be this long
     /// @param gain passband gain (max gain) through filter
     void makeFilter(FilterSpec & filter_spec, 
-		    unsigned int image_size, 
+		    unsigned int buffer_size, 
 		    float gain = 1.0); 
 
     void makeFilter(std::vector<std::complex<float>> Hproto, 
 		    unsigned int num_taps, 
-		    unsigned int image_size,
+		    unsigned int buffer_size,
 		    float gain = 1.0, 		    
 		    WindowChoice window_choice = HAMMING); 
 
@@ -173,8 +175,9 @@ namespace SoDa {
     // and a two more vectors if we're doing a real valued filter
     std::vector<std::complex<float>> temp_in_buf;
     std::vector<std::complex<float>> temp_out_buf;        
-    
-    unsigned int image_size; 
+
+    ///< This is the size of the block (number of samples) that we'll operate on. 
+    unsigned int buffer_size; 
     float sample_rate; 
   };
 }

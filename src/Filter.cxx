@@ -64,19 +64,22 @@ H = fft(h)
   }
   
   Filter::Filter(float low_cutoff, float high_cutoff, float skirt, 
-		 float sample_rate, 
-		 unsigned int image_size, 
+		 float sample_rate,
+		 unsigned int num_taps,
+		 unsigned int buffer_size, 
 		 float gain) {
     
     FilterSpec fspec(sample_rate, low_cutoff, high_cutoff, skirt);
+
+    fspec.setTaps(num_taps);
     
-    makeFilter(fspec, image_size, gain);
+    makeFilter(fspec, buffer_size, gain);
   }
 
   Filter::Filter(FilterSpec & filter_spec, 
-		 unsigned int image_size,
+		 unsigned int buffer_size,
 		 float gain) {
-    makeFilter(filter_spec, image_size, gain);
+    makeFilter(filter_spec, buffer_size, gain);
   }
 
   Filter::Filter(std::vector<std::complex<float>> & Hproto, 
@@ -88,28 +91,24 @@ H = fft(h)
   
   void Filter::makeFilter(std::vector<std::complex<float>> Hproto, 
 			  unsigned int num_taps, 
-			  unsigned int _image_size, 
+			  unsigned int _buffer_size, 
 			  float gain, 
 			  WindowChoice window_choice) {
-    image_size = _image_size;
-    std::cerr << "#A";
+    buffer_size = _buffer_size;
     std::vector<std::complex<float>> hproto(num_taps);    
 
-    std::cerr << "Hproto size " << Hproto.size() << " hproto size " << hproto.size() << "\n";
     // now we've got a frequency domain prototype.
     // first shift it to fit the FFT picture
     FFT pfft(num_taps);
-    std::cerr << "#A1";
-    pfft.shift(Hproto, Hproto);
-    std::cerr << "#B";
 
-    auto f0 = std::unique_ptr<FFT>(new FFT(image_size));    
+    pfft.shift(Hproto, Hproto);
+
     // transform it to the time domain
     pfft.ifft(Hproto, hproto);
-    std::cerr << "#C";
+
     // shift that back to 0 in the middle
     pfft.ishift(hproto, hproto);
-    std::cerr << "#D";
+
     // now apply a window
     if(window_choice != NOWINDOW) {
       std::vector<float> window(num_taps);
@@ -121,38 +120,44 @@ H = fft(h)
       }
     }
 
-    // so now we have the time domain prototype.
-    auto f2 = std::unique_ptr<FFT>(new FFT(image_size));
-    std::cerr << "#E";
-    // embed it in the impulse response of the appropriate length
-    h.resize(image_size);
-    auto f21 = std::unique_ptr<FFT>(new FFT(image_size));
-    std::cerr << "image size " << image_size << " num_taps " << num_taps << "\n";
-    std::cerr << "#E1";
+    std::cerr << "remove this filedump.\n";
+    std::ofstream os("h_H.dat");
 
-    /// blows up after this
+    std::cerr << "Hproto.size = " << Hproto.size() << " hproto.size = " << hproto.size() << "\n";
+    for(int i = 0; i < num_taps; i++) {
+      os << SoDa::Format("%0 %1 %2 %3 %4\n")
+	.addI(i)
+	.addF(Hproto[i].real())
+	.addF(Hproto[i].imag())
+	.addF(hproto[i].real())
+	.addF(hproto[i].imag())
+	;
+    }
+    os.close();
+      
+
+    // so now we have the time domain prototype.
+    // embed it in the impulse response of the appropriate length
+    h.resize(buffer_size);
+    auto f21 = std::unique_ptr<FFT>(new FFT(buffer_size));
+    std::cerr << "buffer size " << buffer_size << " num_taps " << num_taps << "\n";
+
     for(int i = 0; i < num_taps; i++) {
       h[i] = hproto[i];
     }
-    // blows up before this
-    auto f22 = std::unique_ptr<FFT>(new FFT(image_size));
-    std::cerr << "#E2";
 
     // zero the rest
-    for(int i = num_taps; i < image_size; i++) {
+    for(int i = num_taps; i < buffer_size; i++) {
       h[i] = std::complex<float>(0.0, 0.0);
     }
-    auto f3 = std::unique_ptr<FFT>(new FFT(image_size));            
-    std::cerr << "#F";
+
     // now make the frequency domain filter
     
-    fft = std::unique_ptr<FFT>(new FFT(image_size));
-    std::cerr << "#G";    
-    H.resize(image_size);
+    fft = std::unique_ptr<FFT>(new FFT(buffer_size));
+    H.resize(buffer_size);
     
     fft->fft(h, H);
-    std::cerr << "#H";
-    // and now we have it. But we need to rescale by image_size
+    // and now we have it. But we need to rescale by buffer_size
     
     // find the max value and use this as 0dB
     float max = 0.0; 
@@ -160,21 +165,19 @@ H = fft(h)
       auto vm = std::abs(v); 
       max = std::max(vm, max); 
     }
-    std::cerr << "#I";
     float scale = 1.0 / max;
     
     for(auto & v : H) {
       v = v * scale * gain;
     }
-    std::cerr << "#J";    
   }
     
   
   void Filter::makeFilter(FilterSpec & filter_spec, 
-			  unsigned int _image_size, 
+			  unsigned int _buffer_size, 
 			  float gain) {
     sample_rate = filter_spec.getSampleRate();
-    image_size = _image_size;
+    buffer_size = _buffer_size;
     auto num_taps = filter_spec.getTaps();    
 
     // first create a frequency domain ideal filter:
@@ -182,7 +185,7 @@ H = fft(h)
 
     filter_spec.fillHproto(Hproto);
 
-    makeFilter(Hproto, num_taps, image_size, gain);
+    makeFilter(Hproto, num_taps, buffer_size, gain);
   }
 
   void Filter::hammingWindow(std::vector<float> & w) {
@@ -217,11 +220,11 @@ H = fft(h)
   unsigned int Filter::apply(std::vector<std::complex<float>> & in_buf, 
 			     std::vector<std::complex<float>> & out_buf, 
 			     InOutMode in_out_mode) {
-    if((in_buf.size() != image_size) || (out_buf.size() != image_size)) {
-      throw BadBufferSize("apply", in_buf.size(), out_buf.size(), image_size); 
+    if((in_buf.size() != buffer_size) || (out_buf.size() != buffer_size)) {
+      throw BadBufferSize("apply", in_buf.size(), out_buf.size(), buffer_size); 
     }
-    if(temp_buf.size() != image_size) {
-      temp_buf.resize(image_size); 
+    if(temp_buf.size() != buffer_size) {
+      temp_buf.resize(buffer_size); 
     }
 
     std::vector<std::complex<float>> * tbuf_ptr;
@@ -257,15 +260,15 @@ H = fft(h)
   unsigned int Filter::apply(std::vector<float> & in_buf, 
 			     std::vector<float> & out_buf, 
 			     InOutMode in_out_mode) {
-    if((in_buf.size() != image_size) || (out_buf.size() != image_size)) {
-      throw BadBufferSize("apply", in_buf.size(), out_buf.size(), image_size); 
+    if((in_buf.size() != buffer_size) || (out_buf.size() != buffer_size)) {
+      throw BadBufferSize("apply", in_buf.size(), out_buf.size(), buffer_size); 
     }
 
-    if(temp_in_buf.size() != image_size) {
-      temp_in_buf.resize(image_size); 
+    if(temp_in_buf.size() != buffer_size) {
+      temp_in_buf.resize(buffer_size); 
     }
-    if(temp_out_buf.size() != image_size) {
-      temp_out_buf.resize(image_size); 
+    if(temp_out_buf.size() != buffer_size) {
+      temp_out_buf.resize(buffer_size); 
     }
     // first fill a complex vector
     for(int i = 0; i < in_buf.size(); i++) {

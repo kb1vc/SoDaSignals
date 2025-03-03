@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022 Matthew H. Reilly (kb1vc)
+  Copyright (c) 2022, 2025 Matthew H. Reilly (kb1vc)
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,7 @@
 
 #include "FilterSpec.hxx"
 #include <cmath>
+#include <SoDa/Format.hxx>
 
 namespace SoDa {
   FilterSpec::FilterSpec(float sample_rate, unsigned int taps, 
@@ -39,25 +40,21 @@ namespace SoDa {
   }
 
   FilterSpec::FilterSpec(float sample_rate, float low_cutoff, float high_cutoff, 
-			 float skirt_width, 
+			 float skirt_width,
 			 FType filter_type,
 			 float stop_band_attenuation) :
     sorted(false), filter_type(filter_type), 
     sample_rate(sample_rate),
     stop_band_attenuation(stop_band_attenuation)
   {
-    int lo_idx = indexHproto(low_cutoff); 
-    int hi_idx = indexHproto(high_cutoff);
-    // now backwards figure the frequencies to add...
-    float hz_per_bucket = sample_rate / float(taps); 
-    float low_stop = low_cutoff -  1.0001 * hz_per_bucket;
-    float high_stop = high_cutoff + 1.0001 * hz_per_bucket;
-    float low_pass = low_cutoff + 1.0001 * hz_per_bucket; 
-    float high_pass = high_cutoff - 1.0001 * hz_per_bucket;
-    
+    auto low_stop = -0.5 * sample_rate;
+    auto high_stop = 0.5 * sample_rate;
+  
     add(low_stop, 0.0);
+    add(low_cutoff - skirt_width, 0.0);
     add(low_cutoff, 1.0);
     add(high_cutoff, 1.0);
+    add(high_cutoff +skirt_width, 0.0);
     add(high_stop, 0.0);
   }
   
@@ -94,7 +91,6 @@ namespace SoDa {
 
   void FilterSpec::fillHproto(std::vector<std::complex<float>> & Hproto) {
     if(!sorted) sortSpec();
-    std::cerr << "Resizing HProto from " << Hproto.size() << " to " << taps << "\n";
     Hproto.resize(taps);
     
     std::list<std::pair<Corner,Corner>> edges;
@@ -104,7 +100,7 @@ namespace SoDa {
 
     for(int i = 0; i < taps; i++) Hproto.at(i) = std::complex<float>(0.0,0.0);
     for(auto v : spec) {
-      auto idx = indexHproto(v.freq); 
+      auto idx = indexHproto(v.freq);
       for(int i = idx; i < taps; i++) {
 	Hproto.at(i) = std::complex<float>(v.gain,0.0);
       }
