@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022 Matthew H. Reilly (kb1vc)
+  Copyright (c) 2022, 2025 Matthew H. Reilly (kb1vc)
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -78,14 +78,22 @@ namespace SoDa {
     U = uint32_t(i_fs_out / gcd);
     D = uint32_t(i_fs_in / gcd);
 
-    // this all works for D > U.  But for U > D we end up pitch shifting. 
-    
+    // if FS_in > FS_out we do this:
+    //
+    // in --> FFT -- LPF -- <sample middle samples> -- IFFT --> out
+    //
+    // if FS_in < FS_out we do this:
+    //
+    // in --> FFT -- zero stuff --> LPF -- IFFT --> out
+
+    // the LPF is designed for the larger of the two FT images. 
+
     // How big is the low pass filter? 
     double corner_factor = 0.45; 
     double passband = std::min(FS_in, FS_out);
     double cutoff = passband * corner_factor; 
 
-    double skirt_proportion = FS_in / (passband * (0.5 - corner_factor));
+    double skirt_proportion = std::max(FS_in, FS_out) / (passband * (0.5 - corner_factor));
 
     double supression = 60.0;
     // use fred harris's estimate.
@@ -124,9 +132,20 @@ namespace SoDa {
     // finally, the save window is one less than the number of taps
     num_taps = save_count + 1;
 
-    // do we really want to do an LPF?
-    lpf_p = std::unique_ptr<SoDa::Filter>(new SoDa::Filter(-cutoff, cutoff, 0.015 * cutoff, FS_in, 
+    // if we're upsampling, we will apply the LPF to the Y buffer (output)
+    if(FS_out > FS_in) {
+      lpf_p = std::unique_ptr<SoDa::Filter>(new SoDa::Filter(-cutoff, cutoff, 
+							     0.015 * cutoff, 
+							     FS_out, 
+							     num_taps, Ly));
+    }
+    else {
+      // downsampling, filter on the X buffer before the cut-down
+      lpf_p = std::unique_ptr<SoDa::Filter>(new SoDa::Filter(-cutoff, cutoff, 
+							     0.015 * cutoff, 
+							     FS_in, 
 							     num_taps, Lx));
+    }
 
     
     // create the input and output buffers
@@ -193,16 +212,22 @@ namespace SoDa {
     // apply the filter -- we must do this
     // even if we are upsampling, as a raw copy of
     // an FFT segment looks like a brick wall otherwise. 
-    lpf_p->apply(X, X, InOutMode(false,false));
+    // if we are downsampling, apply the lpf here. 
+
       
     // now load the output Y vector
     if(Y.size() < X.size()) {
+      // we are downsampling.
+      // trim out the potential aliasing components
+      lpf_p->apply(X, X, InOutMode(false,false));            
       auto y_half_count = ((Ly + 1)/ 2);
       for(int i = 0; i < y_half_count - 1; i++) {
 	Y.at(i) = X.at(i);	
 	Y.at(Ly - 1 - i) = X.at(Lx - 1 - i);	
       }
       Y.at(y_half_count) = X.at(y_half_count);
+
+      // now lpf since we're down
     }
     else {
       // we are up sampling. Y gets half of X in the bottom, half in the top.
@@ -216,6 +241,9 @@ namespace SoDa {
 	  Y.at((Ly - 1) -(Lx - 1) + i) = X.at(i);
 	}
       }
+
+      /// oooh... we're stuffed.  apply the LPF
+      lpf_p->apply(Y, Y, InOutMode(false, false));
     }
 
     // dumpCVec("Y.dat", Y);    

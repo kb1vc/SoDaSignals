@@ -92,20 +92,24 @@ H = fft(h)
 			  float gain, 
 			  WindowChoice window_choice) {
     image_size = _image_size;
-    
+    std::cerr << "#A";
     std::vector<std::complex<float>> hproto(num_taps);    
 
+    std::cerr << "Hproto size " << Hproto.size() << " hproto size " << hproto.size() << "\n";
     // now we've got a frequency domain prototype.
     // first shift it to fit the FFT picture
     FFT pfft(num_taps);
+    std::cerr << "#A1";
     pfft.shift(Hproto, Hproto);
-    
+    std::cerr << "#B";
+
+    auto f0 = std::unique_ptr<FFT>(new FFT(image_size));    
     // transform it to the time domain
     pfft.ifft(Hproto, hproto);
-
+    std::cerr << "#C";
     // shift that back to 0 in the middle
     pfft.ishift(hproto, hproto);
-
+    std::cerr << "#D";
     // now apply a window
     if(window_choice != NOWINDOW) {
       std::vector<float> window(num_taps);
@@ -116,25 +120,38 @@ H = fft(h)
 	hproto[i] = hproto[i] * window[i];
       }
     }
-    // so now we have the time domain prototype.
 
+    // so now we have the time domain prototype.
+    auto f2 = std::unique_ptr<FFT>(new FFT(image_size));
+    std::cerr << "#E";
     // embed it in the impulse response of the appropriate length
     h.resize(image_size);
+    auto f21 = std::unique_ptr<FFT>(new FFT(image_size));
+    std::cerr << "image size " << image_size << " num_taps " << num_taps << "\n";
+    std::cerr << "#E1";
+
+    /// blows up after this
     for(int i = 0; i < num_taps; i++) {
       h[i] = hproto[i];
     }
+    // blows up before this
+    auto f22 = std::unique_ptr<FFT>(new FFT(image_size));
+    std::cerr << "#E2";
+
     // zero the rest
     for(int i = num_taps; i < image_size; i++) {
       h[i] = std::complex<float>(0.0, 0.0);
     }
-
+    auto f3 = std::unique_ptr<FFT>(new FFT(image_size));            
+    std::cerr << "#F";
     // now make the frequency domain filter
     
     fft = std::unique_ptr<FFT>(new FFT(image_size));
+    std::cerr << "#G";    
     H.resize(image_size);
     
     fft->fft(h, H);
-
+    std::cerr << "#H";
     // and now we have it. But we need to rescale by image_size
     
     // find the max value and use this as 0dB
@@ -143,12 +160,13 @@ H = fft(h)
       auto vm = std::abs(v); 
       max = std::max(vm, max); 
     }
-
+    std::cerr << "#I";
     float scale = 1.0 / max;
     
     for(auto & v : H) {
       v = v * scale * gain;
     }
+    std::cerr << "#J";    
   }
     
   

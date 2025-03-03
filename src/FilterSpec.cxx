@@ -94,7 +94,7 @@ namespace SoDa {
 
   void FilterSpec::fillHproto(std::vector<std::complex<float>> & Hproto) {
     if(!sorted) sortSpec();
-
+    std::cerr << "Resizing HProto from " << Hproto.size() << " to " << taps << "\n";
     Hproto.resize(taps);
     
     std::list<std::pair<Corner,Corner>> edges;

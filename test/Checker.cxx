@@ -31,12 +31,29 @@
 */
 namespace SoDa {
   typedef std::vector<std::complex<float>> CVec;
-  typedef std::vector<float> FVec;   
+  typedef std::vector<float> FVec;
+  typedef std::vector<double> DVec; 
 
   float fixAngle(float v) {
     while(v > M_PI) v = v - 2.0 * M_PI; 
     while(v < -M_PI) v = v + 2.0 * M_PI; 
     return v; 
+  }
+
+
+  void dumpPhase(const std::string & fn, const DVec freqs, const CVec & a, const CVec & b) {
+    std::ofstream os(fn);
+
+    for(int i = 0; i < freqs.size(); i++) {
+      os << SoDa::Format("%0 %1 %2 %3 %4\n")
+			 .addF(freqs[i], 'e')
+			 .addF(std::abs(a[i]))
+			 .addF(std::arg(a[i]))
+			 .addF(std::abs(b[i]))
+			 .addF(std::arg(b[i]))
+			 ;
+    }
+    os.close();
   }
   
   void dump2CVec(std::ostream & of, const CVec & a, const CVec & b) {
@@ -71,28 +88,20 @@ namespace SoDa {
   }
 
   double Checker::phase(double freq) {
-    double phi = (freq / sample_freq) * (double(num_taps) + 1) * M_PI;
-
-    phi = fmod(phi, 2.0 * M_PI);
-    if(phi > M_PI) {
-      phi = phi - 2.0 * M_PI; 
-    }
-
-    return phi;
+    double phi = (freq / sample_freq) * (double(filter_length + 1)) * M_PI;
+    return -1.0 * fixAngle(phi);
   }
   
   Checker::Checker(double sample_freq, uint32_t filter_length, 
 		   double ripple_limit_dB, double stopband_atten_dB, 
 		   double permissible_phase_error,
 		   uint32_t buffer_length,
-		   uint32_t num_taps, 
 		   uint32_t freq_steps) :
     sample_freq(sample_freq), filter_length(filter_length), 
     ripple_limit_dB(ripple_limit_dB),
     stopband_gain_dB(-stopband_atten_dB),
     permissible_phase_error(permissible_phase_error),
-    buffer_length(buffer_length),
-    num_taps(num_taps) 
+    buffer_length(buffer_length)
   {
     
     ref_nco.setSampleRate(sample_freq);
@@ -105,6 +114,7 @@ namespace SoDa {
     second_oscillators.resize(freq_steps);    
     frequencies.resize(freq_steps);
     double freq_step_size = sample_freq / double(freq_steps);
+    std::ofstream phase_out("phase_plot.dat");
     for(int i = 0; i < freq_steps; i++) {
       frequencies[i] = double(i) * freq_step_size - 0.5 * sample_freq;
       ref_nco.setFreq(frequencies[i]);
@@ -112,7 +122,9 @@ namespace SoDa {
       ref_nco.get(first_oscillators[i]);
       second_oscillators[i].resize(buffer_length);
       ref_nco.get(second_oscillators[i]);
+      phase_out << frequencies[i] << " " << phase(frequencies[i]) << "\n";
     }
+    phase_out.close();
   }
 
   uint32_t Checker::getNumFreqSteps() {
@@ -125,9 +137,8 @@ namespace SoDa {
 			      uint32_t freq_step,
 			      std::function<CheckRegion(double)> freqRegion, 
 			      std::function<void(std::vector<std::complex<float>> &,
-						 std::vector<std::complex<float>>& )> filt,
-			      std::vector<float> & gainv,
-			      std::vector<float> & phasev) {
+						 std::vector<std::complex<float>>& )> filt) {
+
     
     // run the filter
     // twice
@@ -140,95 +151,72 @@ namespace SoDa {
 
     auto check_region = freqRegion(frequencies[freq_step]);
     
-    std::cerr << SoDa::Format("test freq %0  idx %1 reg %2\n")
-      .addF(frequencies[freq_step], 'e')
-      .addI(freq_step)
-      .addI(int(check_region))
-      ; 
+    // std::cerr << SoDa::Format("test freq %0  idx %1 reg %2\n")
+    //   .addF(frequencies[freq_step], 'e')
+    //   .addI(freq_step)
+    //   .addI(int(check_region))
+    //   ; 
 
+    // find the autocorrelation for this step
+    auto corr = SoDa::correlate(test_out, second_oscillators[freq_step]);
+    float gain = 10.0 * std::log10(std::abs(corr));
+    float phase_shift = fixAngle(std::arg(corr));
+    float phase_diff = fabs(phase_shift - target_phase_shift);
+    auto orig_phase_diff = phase_diff;
+    phase_diff = fixAngle(phase_diff);
 
-
+    target_phase_shift = phase(frequencies[freq_step]);
+    
     // now calculate the correlation for each frequency
-    for(int i = 0; i < second_oscillators.size(); i++) {
-      // do the correlation for this frequency
-      auto corr = SoDa::correlate(test_out, second_oscillators[i]);
-      float gain = 10.0 * std::log10(std::abs(corr));
-      float phase_shift = std::arg(corr);
-      gainv[i] = gain;
-      phasev[i] = phase_shift;
-      if((check_region == PASS_BAND) && (i == freq_step)) {
-	//	std::cerr << "BANG  " << frequencies[i] << " " <<  phase_shift << "\n";
-	// if we're in the passband, and at the same
-	// frequency as the input, then we need to check
-	// the ripple. 
-      
-	// is the attenuation/gain less than threshold?
-
-	if((gain < -ripple_limit_dB) && (gain > ripple_limit_dB)) {
-	  // we're out of the passband gain.
-	  if(1 || test_passed) {
-	    // we're the first failure.
-	    std::cerr << SoDa::Format("Passband Gain for %4 out-of-range Frequency %0 gain %1 ripple limit %2 index %3 \n")
-	      .addF(frequencies[i], 'e')
-	      .addF(10 * std::log10(gain))
-	      .addF(ripple_limit_dB)
-	      .addI(i)
-	      .addF(frequencies[freq_step])	      
-	      ;
-	    if(test_passed) dump2CVec("ripple_fail.dat", test_out, second_oscillators[i]);	    
-	  }
-
-	  test_passed = false;
+    if(check_region == PASS_BAND) {
+      // is the attenuation/gain less than threshold?
+      if((gain < -ripple_limit_dB) && (gain > ripple_limit_dB)) {
+	// we're out of the passband gain.
+	std::cerr << SoDa::Format("Passband Gain out-of-range Frequency %0 gain %1 ripple limit %2\n")
+	  .addF(frequencies[freq_step], 'e')
+	  .addF(gain)
+	  .addF(ripple_limit_dB)
+	  ;
+	if(test_passed) {	  
+	  dump2CVec("ripple_fail.dat", test_out, second_oscillators[freq_step]);	    
 	}
+	test_passed = false;
+      }
 
-	target_phase_shift = phase(frequencies[i]);
-	auto phase_diff = abs(phase_shift - target_phase_shift);
-	while(phase_diff >= M_PI) phase_diff = phase_diff - M_PI;
+
+
 	
-	if(abs(phase_shift - target_phase_shift) > permissible_phase_error) {
-	  // the delay through the filter is wrong. 
-	  if(1 || test_passed) {
-	    // we're the first failure.
-	    std::cerr << SoDa::Format("Passband shift for %4 out-of-range Frequency %0 shift %1 target %2 index %3 \n")
-	      .addF(frequencies[i], 'e')
-	      .addF(phase_shift)
-	      .addF(target_phase_shift)
-	      .addI(i)
-	      .addF(frequencies[freq_step])
-	      ;
-	      
-	    if(test_passed) dump2CVec("phase_fail.dat", test_out, second_oscillators[i]);	  	    
-	  }
+      if(abs(phase_shift - target_phase_shift) > permissible_phase_error) {
+	// the delay through the filter is wrong. 
+	// we're the first failure.
+	std::cerr << SoDa::Format("Passband shift out-of-range Frequency %0 shift %1 (%3) target %2\n")
+	  .addF(frequencies[freq_step], 'e')
+	  .addF(phase_diff)
+	  .addF(target_phase_shift)
+	  .addF(orig_phase_diff)
+	  ;
+	
+	dump2CVec(SoDa::Format("phase_fail%0.dat").addF(frequencies[freq_step]).str(),
+		    test_out, second_oscillators[freq_step]);
 
-	  test_passed = false;
-	}
-      }  // end check region PASS_BAND and on the test frequency
-      else if((check_region == PASS_BAND) ||
-	      (check_region == STOP_BAND) || 
-	      ((check_region == TRANSITION_BAND) && (i != freq_step))) {
-	// either we're in the passband but at a different test frequency
-	// or in the stop band. 
-	// or in the skirt and on a different frequency
-	// in all cases we should be at the stopband level. 
-	if(gain > stopband_gain_dB) {
-	  if(1 || test_passed) {
-	    std::cerr << SoDa::Format("Stopband gain for %4 exceeds passband limit, Frequency %0 gain %1 target %2 index = %3 \n")
-	      .addF(frequencies[i], 'e')
-	      .addF(gain)
-	      .addF(stopband_gain_dB)
-	      .addI(i)
-	      .addF(frequencies[freq_step])
-	      ;
-	    if(test_passed) { dump2CVec("stopband_fail.dat", test_out, second_oscillators[i]); }
-	  }
 
-	  test_passed = false; 
-	}
+	test_passed = false;
       }
-      else {
-	// we're on the skirts.
-	// anything goes
+    }  // end check region PASS_BAND and on the test frequency
+    else if(check_region == STOP_BAND) {
+      if(gain > stopband_gain_dB) {
+	std::cerr << SoDa::Format("Stopband gain exceeds passband limit, Frequency %0 gain %1 target %2\n")
+	  .addF(frequencies[freq_step], 'e')
+	  .addF(gain)
+	  .addF(stopband_gain_dB)
+	  ;
+	if(test_passed) { dump2CVec("stopband_fail.dat", test_out, second_oscillators[freq_step]); }
+	test_passed = false; 	
       }
+    }
+    else {
+      // we're on the skirts.
+      // anything goes
     }
     
     

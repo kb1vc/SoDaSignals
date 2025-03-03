@@ -41,7 +41,6 @@ namespace SoDa {
 	    double ripple_limit_db, double stopband_atten, 
 	    double permissible_phase_error,
 	    uint32_t buffer_length,
-	    uint32_t num_taps,
 	    uint32_t freq_steps = 1024);
     
     enum CheckRegion { STOP_BAND, PASS_BAND, TRANSITION_BAND };
@@ -49,9 +48,7 @@ namespace SoDa {
     void checkResponse(uint32_t freq_step,
 		       std::function<CheckRegion(double)> freqRegion, 
 		       std::function<void(std::vector<std::complex<float>> &,
-					  std::vector<std::complex<float>> &)> filt,
-		       std::vector<float> & gainv,
-		       std::vector<float> & phasev);
+					  std::vector<std::complex<float>> &)> filt);
         
     bool testPassed() { return test_passed; }
 
@@ -74,7 +71,6 @@ namespace SoDa {
     CheckRegion check_region;    
 
     double sample_freq;
-    uint32_t num_taps; 
     
     bool test_passed; 
     NCO ref_nco;

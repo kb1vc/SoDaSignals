@@ -10,7 +10,7 @@ namespace SoDa {
 			    const std::vector<std::complex<T>> & v1) {
     std::complex<T> result(0, 0);
 
-    auto vsize = (v0.size() > v1.size()) ? v0.size() : v1.size();
+    auto vsize = (v0.size() > v1.size()) ? v1.size() : v0.size();    
 
     for(int i = 0; i < vsize; i++) {
       result += v0[i] * std::conj(v1[i]); 
@@ -26,7 +26,7 @@ namespace SoDa {
 	      const std::vector<T> & v1) {
     T result = 0.0;
 
-    auto vsize = (v0.size() > v1.size()) ? v0.size() : v1.size();
+    auto vsize = (v0.size() > v1.size()) ? v1.size() : v0.size();
 
     for(int i = 0; i < vsize; i++) {
       result += v0[i] * v1[i];
