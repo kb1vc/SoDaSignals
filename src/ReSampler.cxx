@@ -129,6 +129,12 @@ namespace SoDa {
     // remember our discard
     discard_count = save_count * U / D;
 
+    std::cerr << SoDa::Format("Resamp from %0 to %1 cutoff %2\n")
+      .addF(FS_in, 'e')
+      .addF(FS_out, 'e')
+      .addF(cutoff, 'e')
+      ;
+    
     // finally, the save window is one less than the number of taps
     num_taps = save_count + 1;
 

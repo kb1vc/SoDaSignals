@@ -87,7 +87,7 @@ namespace SoDa {
     
     CheckRegion check_region;    
 
-    double output_sample_rate, input_sample_rate;
+    double output_sample_rate, input_sample_rate, high_sample_rate;
     
     bool test_passed; 
     NCO ref_nco;

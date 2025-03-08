@@ -88,7 +88,7 @@ namespace SoDa {
   }
 
   double Checker::phase(double freq) {
-    double phi = (freq / output_sample_rate) * (double(filter_length + 1)) * M_PI;
+    double phi = (freq / high_sample_rate) * (double(filter_length + 1)) * M_PI;
     return -1.0 * fixAngle(phi);
   }
 
@@ -143,7 +143,8 @@ namespace SoDa {
     input_buffer_length = _input_buffer_length;
     output_buffer_length = _output_buffer_length;
     input_sample_rate = _input_sample_rate;
-
+    high_sample_rate = (output_sample_rate > input_sample_rate) ? output_sample_rate : input_sample_rate;
+    
     uint32_t freq_steps = _freq_steps;
 
     ref_nco.setSampleRate(output_sample_rate);
@@ -213,13 +214,16 @@ namespace SoDa {
 
     // find the autocorrelation for this step
     auto corr = SoDa::correlate(test_out, second_output_oscillators[freq_step]);
+
+    target_phase_shift = phase(frequencies[freq_step]);
+    
     float gain = 10.0 * std::log10(std::abs(corr));
     float phase_shift = fixAngle(std::arg(corr));
     float phase_diff = fabs(phase_shift - target_phase_shift);
     auto orig_phase_diff = phase_diff;
-    phase_diff = fixAngle(phase_diff);
+    phase_diff = fabs(fixAngle(phase_diff));
 
-    target_phase_shift = phase(frequencies[freq_step]);
+
     
     // now calculate the correlation for each frequency
     if(check_region == PASS_BAND) {
@@ -237,7 +241,16 @@ namespace SoDa {
 	test_passed = false;
       }
 
-      if(abs(phase_shift - target_phase_shift) > permissible_phase_error) {
+      // std::cerr << SoDa::Format("PSHIFT freq %0 target %1 shift %2 phase_diff %3 orig_diff %4 error %5\n")
+      // 	.addF(frequencies[freq_step], 'e')
+      // 	.addF(target_phase_shift)
+      // 	.addF(phase_shift)
+      // 	.addF(phase_diff)
+      // 	.addF(orig_phase_diff)
+      // 	.addF(abs(phase_shift - target_phase_shift))
+      // 	;
+
+      if(phase_diff > permissible_phase_error) {
 	// the delay through the filter is wrong. 
 	// we're the first failure.
 	std::cerr << SoDa::Format("Passband shift out-of-range Frequency %0 shift %1 (%3) target %2\n")
@@ -246,13 +259,19 @@ namespace SoDa {
 	  .addF(target_phase_shift)
 	  .addF(orig_phase_diff)
 	  ;
-	
+
 	dump2CVec(SoDa::Format("phase_fail%0.dat").addF(frequencies[freq_step]).str(),
 		    test_out, second_output_oscillators[freq_step]);
 
 
 	test_passed = false;
       }
+      else if((frequencies[freq_step] > 12.5e3) && (frequencies[freq_step] < 12.7e3)) {
+	dump2CVec(SoDa::Format("phase_good%0.dat").addF(frequencies[freq_step]).str(),
+		    test_out, second_output_oscillators[freq_step]);
+	
+      }
+      
     }  // end check region PASS_BAND and on the test frequency
     else if(check_region == STOP_BAND) {
       if(gain > stopband_gain_dB) {

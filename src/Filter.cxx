@@ -120,27 +120,11 @@ H = fft(h)
       }
     }
 
-    std::cerr << "remove this filedump.\n";
-    std::ofstream os("h_H.dat");
-
-    std::cerr << "Hproto.size = " << Hproto.size() << " hproto.size = " << hproto.size() << "\n";
-    for(int i = 0; i < num_taps; i++) {
-      os << SoDa::Format("%0 %1 %2 %3 %4\n")
-	.addI(i)
-	.addF(Hproto[i].real())
-	.addF(Hproto[i].imag())
-	.addF(hproto[i].real())
-	.addF(hproto[i].imag())
-	;
-    }
-    os.close();
-      
 
     // so now we have the time domain prototype.
     // embed it in the impulse response of the appropriate length
     h.resize(buffer_size);
     auto f21 = std::unique_ptr<FFT>(new FFT(buffer_size));
-    std::cerr << "buffer size " << buffer_size << " num_taps " << num_taps << "\n";
 
     for(int i = 0; i < num_taps; i++) {
       h[i] = hproto[i];
