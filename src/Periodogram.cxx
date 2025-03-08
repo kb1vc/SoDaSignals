@@ -85,8 +85,6 @@ namespace SoDa {
       alpha = 0.1; 
     }
     beta = 1.0 - alpha;
-
-    std::cerr << "Alpha is now " << alpha << " Beta is " << beta << "\n";
   }
 
   void Periodogram::accumulate(const std::vector<std::complex<float>> & in) {

@@ -193,8 +193,6 @@ namespace SoDa {
 	  auto v = vn * vm * vp; 
 	  if((v > min_size) && (v < best_val)) {
 	    best_val = v;
-	    std::cerr << v << " " << n << " " << m << " " << p << "\n";
-
 	  }
 	}
       }
