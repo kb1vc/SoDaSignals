@@ -35,17 +35,17 @@ namespace SoDa {
 			 FType filter_type
 			 ) :
     sorted(false), filter_type(filter_type), taps(taps), sample_rate(sample_rate),
-    stop_band_attenuation(40.0)
+    stop_band_attenuation_dB(40.0)
   {
   }
 
   FilterSpec::FilterSpec(float sample_rate, float low_cutoff, float high_cutoff, 
 			 float skirt_width,
 			 FType filter_type,
-			 float stop_band_attenuation) :
+			 float stop_band_attenuation_dB) :
     sorted(false), filter_type(filter_type), 
     sample_rate(sample_rate),
-    stop_band_attenuation(stop_band_attenuation)
+    stop_band_attenuation_dB(stop_band_attenuation_dB)
   {
     auto low_stop = -0.5 * sample_rate;
     auto high_stop = 0.5 * sample_rate;
@@ -79,7 +79,7 @@ namespace SoDa {
     }
     
     // now use fred harris's rule for the number of filter taps?
-    float ftaps = sample_rate * stop_band_attenuation / (min_interval * 22);
+    float ftaps = sample_rate * stop_band_attenuation_dB / (min_interval * 22);
 
     unsigned int comp_taps = 2 * int(ftaps / 2) + 1; // make sure it is odd
 
@@ -96,7 +96,6 @@ namespace SoDa {
     std::list<std::pair<Corner,Corner>> edges;
     float start_freq = (filter_type == REAL) ? 0.0 : - (sample_rate / 2);
     float end_freq = sample_rate/2;
-    Corner last(start_freq, -200.0);
 
     for(int i = 0; i < taps; i++) Hproto.at(i) = std::complex<float>(0.0,0.0);
     for(auto v : spec) {
@@ -131,7 +130,7 @@ namespace SoDa {
     return *this;
   }
       
-  const std::list<FilterSpec::Corner> FilterSpec::getSpec() {
+  const std::list<FilterSpec::Corner> & FilterSpec::getSpec() {
     if(!sorted) sortSpec();
     return spec; 
   }

@@ -1,5 +1,5 @@
 /*
-  Copyright (c) 2022 Matthew H. Reilly (kb1vc)
+  Copyright (c) 2022,2025 Matthew H. Reilly (kb1vc)
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -174,8 +174,10 @@ namespace SoDa {
   }
   
   uint32_t FFT::findGoodSize(uint32_t min_size) {
-    // look for the nearest number of the form 2^n * 3^m * 5^p
+    // look for the nearest number of the form 2^n * 3^m * 5^p * 7^q
     // that is greater than min_size.
+    //
+    // The factor of 7 is important for downsampling to 44.1 kHz. 
 
     // don't go more than 2^x+1 where ceil(log2(min_size)) = x
     int max_n = 0;
@@ -185,14 +187,17 @@ namespace SoDa {
 
     uint32_t best_val = max_val;
     
-    int n, m, p;
-    int vn, vm, vp; 
+    int n, m, p, q;
+    int vn, vm, vp, vq; 
     for(n = 0, vn=1; n < max_n; n++, vn *= 2) {
       for(m = 0, vm = 1; m < 4; m++, vm *= 3) {
 	for(p = 0, vp=1; p < 3; p++, vp *= 5) {
-	  auto v = vn * vm * vp; 
-	  if((v > min_size) && (v < best_val)) {
-	    best_val = v;
+	  for(q = 0, vq=1; q < 0; q++, vq *= 7) {
+	    auto v = vn * vm * vp * vq; 
+	    if((v >= min_size) && (v < best_val)) {
+	      best_val = v;
+	      //	      if(min_size == v) return v;
+	    }
 	  }
 	}
       }

@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 3.0.0) # this lets out really old distros like CentOS 6
+CMAKE_MINIMUM_REQUIRED(VERSION 3.7.0) # this lets out really old distros like CentOS 6
 
 
 IF(CMAKE_VERSION VERSION_GREATER 3.0.0)

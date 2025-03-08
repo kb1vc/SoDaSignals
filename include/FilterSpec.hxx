@@ -1,6 +1,6 @@
 #pragma once
 /*
-  Copyright (c) 2022 Matthew H. Reilly (kb1vc)
+  Copyright (c) 2022, 2025 Matthew H. Reilly (kb1vc)
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -48,16 +48,47 @@
 
 namespace SoDa {
 
+  /**
+   * @class FilterSpec
+   *
+   * @brief Describes the shape of a filter. This is used by SoDa::Filter and SoDa::OSFilter
+   * to describe complicated filters that aren't band-pass, band-stop, low-pass, or high-pass. 
+   */
   class FilterSpec {
   public:
-    enum FType { REAL, COMPLEX };
     
+    enum FType { 
+      REAL, ///< The filter will contain only real (float) coefficients. All corners must be at positive frequencies.
+      COMPLEX ///< The filter *may* contain complex coefficients
+    };
+
+    /**
+     * @class Corner
+     *
+     * @brief Specifies a point on a filter response curve. There is no
+     * control of phase, just magnitude. 
+     */
     struct Corner {
+      /**
+       * @brief constructor
+       *
+       * @param freq where the corner lands
+       * @param gain the gain at that corner (in absolute, not dB)
+       */
       Corner(float freq, float gain) : freq(freq), gain(gain) { }
       float freq;
       float gain;
     };
 
+    /**
+     * @class BadRealSpec
+     *
+     * @brief a subclass of std::runtime error thrown when a "real" valued filter spec is passed
+     * a negative frequency.
+     *
+     * @param st a string explaining who was annoyed
+     * @param freq the frequency at which it happened. 
+     */
     class BadRealSpec : public std::runtime_error {
     public:
       BadRealSpec(const std::string & st, float freq) :
@@ -91,11 +122,11 @@ namespace SoDa {
      * by the added corners) must contain only positive
      * frequencies. The constructor will throw Filter::BadRealSpec
      * otherwise.
-     * @param stop_band_attenuation in dB
+     * @param stop_band_attenuation_dB in dB
      */
     FilterSpec(float sample_rate, float low_cutoff, float high_cutoff, float skirt_width, 
 	       FType filter_type = COMPLEX,
-	       float stop_band_attenuation = 60.0
+	       float stop_band_attenuation_dB = 60.0
 	       );
     
     /**
@@ -105,8 +136,8 @@ namespace SoDa {
     FilterSpec(const FilterSpec & f);
 
     /**
-     * Set the starting gain for this filter. (Defaults to -200dB)
-     * @param gain the ideal amplitude at the lowest filter frequency (- sample_freq / 2)
+     * Set the starting gain for this filter. (Defaults to 1e-20)
+     * @param gain the ideal amplitude at the lowest filter frequency (- sample_freq / 2) (absolute, not dB)
      * @return reference to this FilterSpec
      */
     FilterSpec & start(float gain);
@@ -116,19 +147,42 @@ namespace SoDa {
      * a "corner" in the frequency response. 
      * 
      * @param freq the corner frequency
-     * @param gain the ideal gain at the corner frequency (in dB)
+     * @param gain the ideal gain at the corner frequency (absolute, not dB)
      * @return reference to this FilterSpec
      */
     FilterSpec & add(float freq, float gain); 
       
-    const std::list<Corner> getSpec();
+    
+    /**
+     * @brief return a list of the corners in this filter
+     * @return a list of the corners in this filter. 
+     */
+    const std::list<Corner> & getSpec();
 
+    /**
+     * @brief return the sample rate for which this filter will be created.
+     *
+     * @return the sample rate for which this filter will be created.
+     */
     float getSampleRate() { return sample_rate; }
 
+    /**
+     * @brief build the frequency domain image of the prototype filter
+     *
+     * @param Hproto a buffer that will contain the DFT of the filter
+     */
     void fillHproto(std::vector<std::complex<float>> & Hproto);
-    
+
+  protected:
+    /**
+     * @brief find the position in the prototype filter buffer
+     *
+     * @param freq the frequency who's bucket we are looking for
+     * @return the bucket corresponding to freq
+     */
     unsigned int indexHproto(float freq); 
-      
+
+  public:
     /**
      * @brief How many taps do we need to provide the requested 
      * shortest transition edge? 
@@ -142,26 +196,43 @@ namespace SoDa {
      */
     unsigned int estimateTaps(unsigned int min, unsigned int max); 
 
+    /**
+     * @brief set the number of taps in the filter
+     * @param new_tapcount yup...
+     * @return the old tap count
+     */
     unsigned int setTaps(unsigned int new_tapcount) { 
       taps = new_tapcount;
       return taps;
     }
-    
+
+    /**
+     * @brief return the number of taps in the filter image
+     *
+     */
     unsigned int getTaps() {
       return taps; 
     }
 
+    /**
+     * @brief how wide is the filter?
+     *
+     * @return the frequency for the lowest and highest specified corner
+     */
     std::pair<float, float> getFilterEdges();
     
   protected:
-    bool sorted; 
+    bool sorted; ///< if true, the corner list is in order of frequency.
+    /**
+     * @brief sort the corner list from lowest frequency to highest
+     */
     void sortSpec();
       
     unsigned int taps; 
     float sample_rate;
     FType filter_type;
 
-    float stop_band_attenuation; 
+    float stop_band_attenuation_dB; 
     
     std::list<Corner> spec; 
   };
