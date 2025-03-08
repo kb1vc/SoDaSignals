@@ -192,11 +192,11 @@ namespace SoDa {
     for(n = 0, vn=1; n < max_n; n++, vn *= 2) {
       for(m = 0, vm = 1; m < 4; m++, vm *= 3) {
 	for(p = 0, vp=1; p < 3; p++, vp *= 5) {
-	  for(q = 0, vq=1; q < 0; q++, vq *= 7) {
+	  for(q = 0, vq=1; q < 3; q++, vq *= 7) {
 	    auto v = vn * vm * vp * vq; 
 	    if((v >= min_size) && (v < best_val)) {
 	      best_val = v;
-	      //	      if(min_size == v) return v;
+	      if(min_size == v) return v;
 	    }
 	  }
 	}

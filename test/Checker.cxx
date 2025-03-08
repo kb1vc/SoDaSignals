@@ -216,8 +216,8 @@ namespace SoDa {
     auto corr = SoDa::correlate(test_out, second_output_oscillators[freq_step]);
 
     target_phase_shift = phase(frequencies[freq_step]);
-    
-    float gain = 10.0 * std::log10(std::abs(corr));
+    // do the gains in dB power
+    float gain = 20.0 * std::log10(std::abs(corr));
     float phase_shift = fixAngle(std::arg(corr));
     float phase_diff = fabs(phase_shift - target_phase_shift);
     auto orig_phase_diff = phase_diff;
@@ -275,7 +275,7 @@ namespace SoDa {
     }  // end check region PASS_BAND and on the test frequency
     else if(check_region == STOP_BAND) {
       if(gain > stopband_gain_dB) {
-	std::cerr << SoDa::Format("Stopband gain exceeds passband limit, Frequency %0 gain %1 target %2\n")
+	std::cerr << SoDa::Format("Stopband gain exceeds limit, Frequency %0 gain %1 target %2\n")
 	  .addF(frequencies[freq_step], 'e')
 	  .addF(gain)
 	  .addF(stopband_gain_dB)
