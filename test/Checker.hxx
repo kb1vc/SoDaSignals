@@ -1,6 +1,6 @@
 #pragma once
 /*
-  Copyright (c) 2022 Matthew H. Reilly (kb1vc)
+  Copyright (c) 2022, 2025 Matthew H. Reilly (kb1vc)
   All rights reserved.
 
   Redistribution and use in source and binary forms, with or without
@@ -37,12 +37,29 @@ namespace SoDa {
   typedef std::vector<std::complex<float>> CVec; 
   class Checker {
   public:
-    Checker(double sample_freq, uint32_t filter_length, 
+    Checker(double output_sample_rate, uint32_t filter_length, 
 	    double ripple_limit_db, double stopband_atten, 
 	    double permissible_phase_error,
 	    uint32_t buffer_length,
 	    uint32_t freq_steps = 1024);
-    
+
+    Checker(double output_sample_rate, uint32_t filter_length, 
+	    double ripple_limit_db, double stopband_atten, 
+	    double permissible_phase_error,
+	    uint32_t input_buffer_length,
+	    uint32_t output_buffer_length, 
+	    double input_sample_rate,
+	    uint32_t freq_steps = 1024);
+
+    void initialize(double output_sample_rate, uint32_t filter_length, 
+	    double ripple_limit_db, double stopband_atten, 
+	    double permissible_phase_error,
+	    uint32_t input_buffer_length,
+	    uint32_t output_buffer_length, 
+	    double input_sample_rate,
+		    uint32_t freq_steps);
+
+		    
     enum CheckRegion { STOP_BAND, PASS_BAND, TRANSITION_BAND };
 
     void checkResponse(uint32_t freq_step,
@@ -66,16 +83,18 @@ namespace SoDa {
     double ripple_limit_dB;
     double stopband_gain_dB;
     double threshold_min, threshold_max;
-    uint32_t buffer_length; 
+    uint32_t input_buffer_length, output_buffer_length; 
     
     CheckRegion check_region;    
 
-    double sample_freq;
+    double output_sample_rate, input_sample_rate;
     
     bool test_passed; 
     NCO ref_nco;
+    NCO input_nco; 
 
     std::vector<double> frequencies;
-    std::vector<std::vector<std::complex<float>>> first_oscillators, second_oscillators; 
+    std::vector<std::vector<std::complex<float>>> first_output_oscillators, second_output_oscillators;
+    std::vector<std::vector<std::complex<float>>> first_input_oscillators, second_input_oscillators;     
   };
 }

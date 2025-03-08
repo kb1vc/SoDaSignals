@@ -88,66 +88,120 @@ namespace SoDa {
   }
 
   double Checker::phase(double freq) {
-    double phi = (freq / sample_freq) * (double(filter_length + 1)) * M_PI;
+    double phi = (freq / output_sample_rate) * (double(filter_length + 1)) * M_PI;
     return -1.0 * fixAngle(phi);
   }
-  
-  Checker::Checker(double sample_freq, uint32_t filter_length, 
+
+  Checker::Checker(double sample_rate, uint32_t filter_length, 
 		   double ripple_limit_dB, double stopband_atten_dB, 
 		   double permissible_phase_error,
 		   uint32_t buffer_length,
-		   uint32_t freq_steps) :
-    sample_freq(sample_freq), filter_length(filter_length), 
-    ripple_limit_dB(ripple_limit_dB),
-    stopband_gain_dB(-stopband_atten_dB),
-    permissible_phase_error(permissible_phase_error),
-    buffer_length(buffer_length)
-  {
-    
-    ref_nco.setSampleRate(sample_freq);
+		   uint32_t freq_steps) {
 
+    initialize(sample_rate, filter_length,
+	       ripple_limit_dB, stopband_atten_dB,
+	       permissible_phase_error,
+	       buffer_length,
+	       buffer_length,
+	       sample_rate,
+	       freq_steps);
+  }
+  
+  Checker::Checker(double sample_rate, uint32_t filter_length, 
+		   double ripple_limit_dB, double stopband_atten_dB, 
+		   double permissible_phase_error,
+		   uint32_t input_buffer_length,
+		   uint32_t output_buffer_length,
+		   double input_sample_rate,
+		   uint32_t freq_steps) {
+
+    initialize(sample_rate, filter_length,
+	       ripple_limit_dB, stopband_atten_dB,
+	       permissible_phase_error,
+	       input_buffer_length,
+	       output_buffer_length,
+	       input_sample_rate,
+	       freq_steps);
+  }
+
+  void Checker::initialize(double _output_sample_rate, 
+			   uint32_t _filter_length, 
+			   double _ripple_limit_dB, 
+			   double _stopband_atten_dB, 
+			   double _permissible_phase_error,
+			   uint32_t _input_buffer_length,
+			   uint32_t _output_buffer_length,
+			   double _input_sample_rate,
+			   uint32_t _freq_steps) 
+  {
+
+    output_sample_rate = _output_sample_rate;
+    filter_length = _filter_length; 
+    ripple_limit_dB = _ripple_limit_dB;
+    stopband_gain_dB = -_stopband_atten_dB;
+    permissible_phase_error = _permissible_phase_error;
+    input_buffer_length = _input_buffer_length;
+    output_buffer_length = _output_buffer_length;
+    input_sample_rate = _input_sample_rate;
+
+    uint32_t freq_steps = _freq_steps;
+
+    ref_nco.setSampleRate(output_sample_rate);
+    input_nco.setSampleRate(input_sample_rate);
     
     test_passed = true;
 
     // setup the oscillators
-    first_oscillators.resize(freq_steps);
-    second_oscillators.resize(freq_steps);    
+    first_output_oscillators.resize(freq_steps);
+    second_output_oscillators.resize(freq_steps);
+    first_input_oscillators.resize(freq_steps);
+    second_input_oscillators.resize(freq_steps);    
     frequencies.resize(freq_steps);
-    double freq_step_size = sample_freq / double(freq_steps);
+    double lower_sample_rate = (input_sample_rate < output_sample_rate) ? input_sample_rate : output_sample_rate;
+    double freq_step_size = lower_sample_rate / double(freq_steps);
     std::ofstream phase_out("phase_plot.dat");
+
     for(int i = 0; i < freq_steps; i++) {
-      frequencies[i] = double(i) * freq_step_size - 0.5 * sample_freq;
+      frequencies[i] = double(i) * freq_step_size - 0.5 * lower_sample_rate;
+
       ref_nco.setFreq(frequencies[i]);
-      first_oscillators[i].resize(buffer_length);
-      ref_nco.get(first_oscillators[i]);
-      second_oscillators[i].resize(buffer_length);
-      ref_nco.get(second_oscillators[i]);
+      first_output_oscillators[i].resize(output_buffer_length);
+      ref_nco.get(first_output_oscillators[i]);
+      second_output_oscillators[i].resize(output_buffer_length);
+      ref_nco.get(second_output_oscillators[i]);
+
       phase_out << frequencies[i] << " " << phase(frequencies[i]) << "\n";
+
+      input_nco.setFreq(frequencies[i]);
+      first_input_oscillators[i].resize(input_buffer_length);
+      input_nco.get(first_input_oscillators[i]);
+      second_input_oscillators[i].resize(input_buffer_length);
+      input_nco.get(second_input_oscillators[i]);      
     }
     phase_out.close();
   }
 
+
+
   uint32_t Checker::getNumFreqSteps() {
-    return first_oscillators.size();
+    return first_output_oscillators.size();
   }
 
   double Checker::getFreq(uint32_t idx) { return frequencies[idx]; }
-  
-  void Checker::checkResponse(
-			      uint32_t freq_step,
+
+  void Checker::checkResponse(uint32_t freq_step,
 			      std::function<CheckRegion(double)> freqRegion, 
 			      std::function<void(std::vector<std::complex<float>> &,
 						 std::vector<std::complex<float>>& )> filt) {
-
     
     // run the filter
     // twice
-    std::vector<std::complex<float>> test_out(buffer_length);
-    std::vector<float> freq_resp(second_oscillators.size());
+    std::vector<std::complex<float>> test_out(output_buffer_length);
+    std::vector<float> freq_resp(second_output_oscillators.size());
     
-    filt(first_oscillators[freq_step], test_out);
+    filt(first_input_oscillators[freq_step], test_out);
     // call it again
-    filt(second_oscillators[freq_step], test_out);
+    filt(second_input_oscillators[freq_step], test_out);
 
     auto check_region = freqRegion(frequencies[freq_step]);
     
@@ -158,7 +212,7 @@ namespace SoDa {
     //   ; 
 
     // find the autocorrelation for this step
-    auto corr = SoDa::correlate(test_out, second_oscillators[freq_step]);
+    auto corr = SoDa::correlate(test_out, second_output_oscillators[freq_step]);
     float gain = 10.0 * std::log10(std::abs(corr));
     float phase_shift = fixAngle(std::arg(corr));
     float phase_diff = fabs(phase_shift - target_phase_shift);
@@ -178,14 +232,11 @@ namespace SoDa {
 	  .addF(ripple_limit_dB)
 	  ;
 	if(test_passed) {	  
-	  dump2CVec("ripple_fail.dat", test_out, second_oscillators[freq_step]);	    
+	  dump2CVec("ripple_fail.dat", test_out, second_output_oscillators[freq_step]);	    
 	}
 	test_passed = false;
       }
 
-
-
-	
       if(abs(phase_shift - target_phase_shift) > permissible_phase_error) {
 	// the delay through the filter is wrong. 
 	// we're the first failure.
@@ -197,7 +248,7 @@ namespace SoDa {
 	  ;
 	
 	dump2CVec(SoDa::Format("phase_fail%0.dat").addF(frequencies[freq_step]).str(),
-		    test_out, second_oscillators[freq_step]);
+		    test_out, second_output_oscillators[freq_step]);
 
 
 	test_passed = false;
@@ -210,7 +261,7 @@ namespace SoDa {
 	  .addF(gain)
 	  .addF(stopband_gain_dB)
 	  ;
-	if(test_passed) { dump2CVec("stopband_fail.dat", test_out, second_oscillators[freq_step]); }
+	if(test_passed) { dump2CVec("stopband_fail.dat", test_out, second_output_oscillators[freq_step]); }
 	test_passed = false; 	
       }
     }
