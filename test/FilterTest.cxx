@@ -19,7 +19,7 @@ int main() {
   float fhp = 10e3;
 
   uint32_t buflen = 16 * 1024; 
-  float skirt = 400.0;
+  float skirt = 1000.0;
   float att = 50.0;
   uint32_t taps = int((Fs / skirt) * (att / 22.0));
   taps = taps | 1;

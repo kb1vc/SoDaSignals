@@ -32,11 +32,6 @@ target_link_libraries(ReSamplerTest sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(ReSamplerTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(ReSamplerTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 
-add_executable(NCOTest NCOTest.cxx)
-target_link_libraries(NCOTest sodasignals ${SoDaUtils_LIBRARIES})
-target_link_directories(NCOTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
-target_include_directories(NCOTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
-
 add_executable(ReSamplerSweep ReSamplerSweep.cxx)
 target_link_libraries(ReSamplerSweep sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(ReSamplerSweep PUBLIC ${SoDaUtils_LIBRARY_DIRS})
@@ -118,6 +113,11 @@ endif()
 add_test(NAME OSFilterTest
   COMMAND $<TARGET_FILE:OSFilterTest>)
 set_tests_properties(OSFilterTest PROPERTIES
+  PASS_REGULAR_EXPRESSION "PASSED")
+
+add_test(NAME FilterTest
+  COMMAND $<TARGET_FILE:FilterTest>)
+set_tests_properties(FilterTest PROPERTIES
   PASS_REGULAR_EXPRESSION "PASSED")
 
 
