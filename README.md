@@ -47,7 +47,6 @@ And the optional doxygen kit:
 ```
 apt install doxygen
 ```
-```
 
 SoDaSignals also requires the SoDaUtils library. It will attempt to
 build the library itself if it isn't already installed. 
