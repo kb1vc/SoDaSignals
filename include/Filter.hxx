@@ -58,8 +58,22 @@ namespace SoDa {
   
   class Filter {
   public:
+    /**
+     * @class BadBufferSize
+     *
+     * @brief The filter was built to process a buffer of a size different from the
+     * one that was passed to "apply."
+     */
     class BadBufferSize : public std::runtime_error {
     public:
+      /**
+       * @brief Signal a buffer size mismatch error.
+       *
+       * @param st a more detailed description of what happened.
+       * @param in the input buffer size
+       * @param out the output buffer size
+       * @param req the buffer size for which the filter was created.
+       */
       BadBufferSize(const std::string & st, unsigned int in, unsigned int out, unsigned int req);
     };
 
