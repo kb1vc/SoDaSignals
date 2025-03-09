@@ -55,19 +55,6 @@ namespace SoDa {
 
     // all "apply" functions can bypass one or more of the input and output conversions
   // into the frequency domain. 
-  struct InOutMode {
-    InOutMode(bool ti, bool to) : time_in(ti), time_out(to) { }
-    bool time_in;
-    bool time_out; 
-  };
-
-  /// select the window to be applied in constructing the filter
-  enum WindowChoice {
-    NOWINDOW, ///< a really bad idea. Included just for experimentation
-    HAMMING, ///< a classic
-    HANN, ///< tight skirts (!)
-    BLACKMAN ///< good compromise
-  };
   
   class Filter {
   public:
@@ -77,6 +64,28 @@ namespace SoDa {
     };
 
 
+    /**
+     * @class InOutMode
+     * @brief indicate to filter apply method that input is already in frequency domain, or output
+     * should be left in frequency domain
+     */
+    struct InOutMode {
+      /**
+       * @param ti if true, the input is already in the frequency domain
+       * @param to if true, do not transform the filter output from the frequency domain
+       */
+      InOutMode(bool ti, bool to) : xform_in(ti), xform_out(to) { }
+      bool xform_in;
+      bool xform_out; 
+    };
+
+    /// select the window to be applied in constructing the filter
+    enum WindowChoice {
+      NOWINDOW, ///< a really bad idea. Included just for experimentation
+      HAMMING, ///< a classic
+      HANN, ///< tight skirts (!)
+      BLACKMAN ///< good compromise
+    };
     
     /**
      * @brief Build the filter from a filter spec for a general filter

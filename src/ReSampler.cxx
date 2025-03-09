@@ -221,7 +221,7 @@ namespace SoDa {
     if(Y.size() < X.size()) {
       // we are downsampling.
       // trim out the potential aliasing components
-      lpf_p->apply(X, X, InOutMode(false,false));            
+      lpf_p->apply(X, X, Filter::InOutMode(false,false));            
       auto y_half_count = ((Ly + 1)/ 2);
       for(int i = 0; i < y_half_count - 1; i++) {
 	Y.at(i) = X.at(i);	
@@ -245,7 +245,7 @@ namespace SoDa {
       }
 
       /// oooh... we're stuffed.  apply the LPF
-      lpf_p->apply(Y, Y, InOutMode(false, false));
+      lpf_p->apply(Y, Y, Filter::InOutMode(false, false));
     }
 
     // dumpCVec("Y.dat", Y);    

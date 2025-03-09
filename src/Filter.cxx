@@ -231,7 +231,7 @@ H = fft(h)
     }
 
     std::vector<std::complex<float>> * tbuf_ptr;
-    if(in_out_mode.time_in) {
+    if(in_out_mode.xform_in) {
       // first do the transform
       fft->fft(in_buf, temp_buf);
       tbuf_ptr = & temp_buf; 
@@ -242,7 +242,7 @@ H = fft(h)
     }
     
     float scale = 1.0 / float(H.size());
-    if(in_out_mode.time_out) {
+    if(in_out_mode.xform_out) {
       // now multiply
       for(int i = 0; i < tbuf_ptr->size(); i++) {
 	(*tbuf_ptr)[i] = (*tbuf_ptr)[i] * H[i] * scale;

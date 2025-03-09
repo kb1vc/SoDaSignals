@@ -62,7 +62,7 @@ namespace SoDa {
 				   unsigned int num_taps, 
 				   unsigned int _buffer_size, 
 				   float gain,
-				   WindowChoice window_choice
+				   Filter::WindowChoice window_choice
 				   ) {
     buffer_size = _buffer_size; 
 

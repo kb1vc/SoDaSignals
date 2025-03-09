@@ -114,7 +114,7 @@ namespace SoDa {
 			   unsigned int num_taps, 
 			   unsigned int buffer_size,
 			   float gain = 1.0,
-			   WindowChoice window_choice = HAMMING);
+			   Filter::WindowChoice window_choice = Filter::HAMMING);
     
     uint32_t buffer_size; 
     
