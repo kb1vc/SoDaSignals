@@ -183,7 +183,7 @@ namespace SoDa {
      */
     unsigned int outLenRequired(unsigned int in_size) { return in_size; }
 
-  protected:
+  private:
     /** @brief  Build the filter from a filter spec for a bandpass filter -- common method
      * for all forms of Filter constructors. 
      * 

@@ -97,7 +97,7 @@ namespace SoDa {
     };
 
     /**
-     * @brief fill an length N vector with the next N steps of the oscillator
+     * @brief fill a length N vector with the next N steps of the oscillator
      *
      * @param out get will fill this vector (float)
      * @param sum if set to "ADD" the new steps will be *added* to the output, otherwise
@@ -107,7 +107,7 @@ namespace SoDa {
     void get(std::vector<std::complex<float>> & out, SumIt sum = SET);
 
     /**
-     * @brief fill an length N vector with the next N steps of the oscillator
+     * @brief fill a length N vector with the next N steps of the oscillator
      *
      * @param out get will fill this vector (double)
      * @param sum if set to "ADD" the new steps will be *added* to the output, otherwise
@@ -133,7 +133,7 @@ namespace SoDa {
       FreqOutOfBounds(double fs, double fr);
     };
     
-  protected:
+  private:
     double sample_rate; 
     double cur_angle;
     double ang_incr; 

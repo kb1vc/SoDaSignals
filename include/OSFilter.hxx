@@ -59,37 +59,66 @@ namespace SoDa {
     };
 
 
-    
-    /// constructor
-    /// Build the filter from a filter spec for a bandpass filter
-    /// 
-    /// @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
-    /// @param buffer_size the impulse response and frequency image will be this long
-    OSFilter(FilterSpec & filter_spec, 
-	   unsigned int buffer_size); 
 
-    /// Alternate constructor, for very simple filters
+    /**
+     * constructor
+     * @brief Build the filter from a filter spec for a bandpass filter
+     * 
+     * @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
+     * @param buffer_size the impulse response and frequency image will be this long
+     * @param gain relative magnitude of input to output in the passband     
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN
+     */
+    OSFilter(FilterSpec & filter_spec, 
+	     unsigned int buffer_size,
+	     float gain = 1.0, 
+	     Filter::WindowChoice window = Filter::HANN);        
+
+    /**
+     * @brief Alternate constructor, for very simple filters
+     *
+     * @param low_cutoff lower edge of the filter
+     * @param high_cutoff upper edge of the filter
+     * @param skirt width of transition band between cutoff and stopband
+     * @param sample_rate sample rate for the input stream. 
+     * @param buffer_size size of the input buffer when apply is called
+     * @param stop_band_attenuation in dB
+     * @param gain relative magnitude of input to output in the passband
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN
+     */
     OSFilter(float low_cutoff, float high_cutoff, float skirt,
 	     float sample_rate, unsigned int buffer_size,
-	     float stop_band_attenuation = 60.0);
+	     float stop_band_attenuation = 60.0,
+	     float gain = 1.0,
+	     Filter::WindowChoice window = Filter::HANN);    
 
-    /// Some subclasses of OSFilter don't have much to say
-    /// at construction time. 
-    OSFilter(); 
     
-    /// run the filter on a complex input stream
-    /// @param in_buf the input buffer I/Q samples (complex)
-    /// @param out_buf the output buffer I/Q samples (complex)
-    /// @return the length of the input buffer
+
+    /**
+     * @brief Some subclasses of OSFilter don't have much to say
+     * at construction time.
+     */
+    OSFilter(); 
+
+    /**
+     * @brief run the filter on a complex input stream
+     * @param in_buf the input buffer I/Q samples (complex)
+     * @param out_buf the output buffer I/Q samples (complex)
+     * @return the length of the input buffer
+     *
+     * Throws OSFilter::BadRealOSFilter if the original filter spec was not "real"            
+     */
     unsigned int apply(std::vector<std::complex<float>> & in_buf, 
 		       std::vector<std::complex<float>> & out_buf);
 
 
-    /// run the filter on a real input stream
-    /// @param in_buf the input buffer samples
-    /// @param out_buf the output buffer samples (this can overlap the in_buf vector)
-    ///
-    /// Throws OSFilter::BadRealOSFilter if the original filter spec was not "real"
+    /**
+     * @brief run the filter on a real input stream
+     * @param in_buf the input buffer samples
+     * @param out_buf the output buffer samples (this can overlap the in_buf vector)
+     *
+     * Throws OSFilter::BadRealOSFilter if the original filter spec was not "real"
+     */
     unsigned int apply(std::vector<float> & in_buf, 
 		       std::vector<float> & out_buf);
 
@@ -100,9 +129,12 @@ namespace SoDa {
     unsigned int getInternalSize() { return x_augmented.size(); }
 
     std::pair<float,float> getFilterEdges() { return filter_p->getFilterEdges(); }
-  protected:
+
+  private:
     void makeOSFilter(FilterSpec & filter_spec, 
-		      unsigned int _buffer_size);
+		      unsigned int _buffer_size,
+		      float gain, 
+		      Filter::WindowChoice window);
 
     // This might be used in the hilbert transformer, as its filter shape
     // is rather strange. Though don't go looking for the hilbert transformer

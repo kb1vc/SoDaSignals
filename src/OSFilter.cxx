@@ -37,21 +37,23 @@ namespace SoDa {
   
   OSFilter::OSFilter(float low_cutoff, float high_cutoff, float skirt, 
 		     float sample_rate, unsigned int buffer_size, 
-		     float stop_band_attenuation) {
-
-
+		     float stop_band_attenuation,
+		     float gain, 
+		     Filter::WindowChoice window) {
 
     
     FilterSpec fspec(sample_rate, low_cutoff, high_cutoff, skirt,
 		     FilterSpec::COMPLEX,
 		     stop_band_attenuation);
 
-    makeOSFilter(fspec, buffer_size); 
+    makeOSFilter(fspec, buffer_size, gain, window); 
   }
 
   OSFilter::OSFilter(FilterSpec & filter_spec, 
-		 unsigned int buffer_size) {
-    makeOSFilter(filter_spec, buffer_size); 
+		     unsigned int buffer_size,
+		     float gain, 
+		     Filter::WindowChoice window) {    
+    makeOSFilter(filter_spec, buffer_size, gain, window); 
   }
 
   OSFilter::OSFilter() {
@@ -79,7 +81,9 @@ namespace SoDa {
   }
   
   void OSFilter::makeOSFilter(FilterSpec & filter_spec, 
-			      unsigned int _buffer_size) {
+			      unsigned int _buffer_size,
+			      float gain, 
+			      Filter::WindowChoice window) {
 
     buffer_size = _buffer_size; 
 
@@ -97,7 +101,7 @@ namespace SoDa {
       
     filter_spec.setTaps(taps);
     
-    filter_p = std::unique_ptr<Filter>(new Filter(filter_spec, good_size));
+    filter_p = std::unique_ptr<Filter>(new Filter(filter_spec, good_size, gain, window));
     
     // now size all the buffers. 
     x_augmented.resize(good_size);
