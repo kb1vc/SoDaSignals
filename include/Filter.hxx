@@ -167,7 +167,7 @@ namespace SoDa {
      * @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
      * @param buffer_size the impulse response and frequency image will be this long
      * @param gain passband gain (max gain) through filter
-     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN  
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN 
      * 
      */
     void makeFilter(FilterSpec & filter_spec, 
@@ -180,7 +180,7 @@ namespace SoDa {
      * @param Hproto frequency domain filter image
      * @param buffer_size the impulse response and frequency image will be this long
      * @param gain passband gain (max gain) through filter
-     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN  
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN 
      * 
      */
     void makeFilter(std::vector<std::complex<float>> Hproto, 
@@ -188,14 +188,23 @@ namespace SoDa {
 		    float gain = 1.0, 		    
 		    WindowChoice window = HAMMING); 
 
-    
-    /// parameters that we keep to support display masks on the spectrogram
-    double low_edge, high_edge; 
 
+    /**
+     * @brief create a hamming window to make the filter nice.
+     * @param w a vector that will be multiplied by the filter image
+     */
     void hammingWindow(std::vector<float> & w);
 
+    /**
+     * @brief create a hann window to make the filter nice.
+     * @param w a vector that will be multiplied by the filter image
+     */
     void hannWindow(std::vector<float> & w);
 
+    /**
+     * @brief create a blackman window to make the filter nice.
+     * @param w a vector that will be multiplied by the filter image
+     */
     void blackmanWindow(std::vector<float> & w);        
     
     // this is the FFT image of the filter
@@ -203,19 +212,19 @@ namespace SoDa {
 
     std::vector<std::complex<float>> h; ///< impulse response of the filter
 
-    // We need an FFT widget for the input/output transforms
+    ///< We need an FFT widget for the input/output transforms
     std::unique_ptr<FFT> fft; 
     
-    // and we need a temporary vector for the frequency domain product
+    ///< and we need a temporary vector for the frequency domain product
     std::vector<std::complex<float>> temp_buf;
 
-    // and a two more vectors if we're doing a real valued filter
+    ///< and a two more vectors if we're doing a real valued filter
     std::vector<std::complex<float>> temp_in_buf;
     std::vector<std::complex<float>> temp_out_buf;        
 
-    ///< This is the size of the block (number of samples) that we'll operate on. 
+    /// This is the size of the block (number of samples) that we'll operate on. 
     unsigned int buffer_size; 
-    float sample_rate; 
+    float sample_rate;  ///< does this really need documentation? 
   };
 }
 

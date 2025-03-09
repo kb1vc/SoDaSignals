@@ -1,10 +1,10 @@
-#include <SoDa/ReSampler.hxx>
+#include <SoDa/OSFilter.hxx>
 #include <iostream>
 #include <fstream>
 #include <cmath>
 #include <SoDa/Format.hxx>
 
-#define FTYPE double
+
 
 int main() {
   int sample_rate = 1000; 
@@ -15,20 +15,19 @@ int main() {
     int buflen = 400;    
     double f_sample_rate = ((double) sample_rate);
     // a bandpass filter from 
-    SoDa::Filter<FTYPE> filt_LP(SoDa::FilterType::BP, num_taps, 
-				 f_sample_rate, 
-				 0.0, 0.15 * f_sample_rate,
-				 0.0025 * f_sample_rate,
-				50, 
-				buflen);
+  SoDa::OSFilter filt_LP(0.0, // low cutoff
+		       0.15 * f_sample_rate, // hi cutoff
+		       0.0025 * f_sample_rate,  // skirt size
+		       f_sample_rate, // sample rate
+		       buflen); 
 
 
-    std::vector<std::complex<FTYPE>> in(buflen), out(buflen);
+    std::vector<std::complex<float>> in(buflen), out(buflen);
 
-    // put something in at 0.2 (f_nyquist / 2)
+    // put something in the passband
 
-    FTYPE ang = 0.0;
-    FTYPE ang_inc = 2 * M_PI / 23.0;
+    float ang = 0.0;
+    float ang_inc = 2 * M_PI * 0.005;
 
     int ko = 0;
     
@@ -36,18 +35,18 @@ int main() {
 
     for(int tr = 0; tr < 5; tr++) {
       for(int i = 0; i < in.size(); i++) {
-	in[i] = std::complex<FTYPE>(cos(ang), sin(-ang));
+	in[i] = std::complex<float>(cos(ang), sin(-ang));
 	ang = ang + ang_inc;
 	ang = (ang > M_PI) ? (ang - 2.0 * M_PI) : ang; 
       }
     
 
       // apply the filter
-      filt_LP.applyCont(out, in);
+      filt_LP.apply(in, out);
 
       int lim = out.size() - 1;
       for(int i = 0; i < out.size(); i++, ko++) {
-	FTYPE iv = (i == lim) ? (tr + 1.0) : 0;
+	float iv = (i == lim) ? (tr + 1.0) : 0;
 	outf << SoDa::Format("%0 %1 %2 %3 %4 %5\n")
 	  .addI(ko)
 	  .addF(in[i].real())

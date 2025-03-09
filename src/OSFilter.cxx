@@ -94,13 +94,6 @@ namespace SoDa {
     uint32_t good_size = FFT::findGoodSize(buffer_size + gtaps);
     // taps are what's left over
     uint32_t taps = good_size - buffer_size + 1;
-
-    std::cerr << SoDa::Format("makeOSFilter gtaps = %0 buffer_size %1 good_size %2 taps %3\n")
-			      .addI(gtaps)
-			      .addI(buffer_size)
-			      .addI(good_size)
-			      .addI(taps)
-			      ;
       
     filter_spec.setTaps(taps);
     

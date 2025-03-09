@@ -45,7 +45,7 @@ int main(int argc, char * argv[]) {
 
   auto config_start = std::chrono::high_resolution_clock::now();
   // now create the FFT object
-  SoDa::FFT fft(vsize, FFTW_EXHAUSTIVE);
+  SoDa::FFT fft(vsize, SoDa::FFT::EXHAUST);
   auto config_end = std::chrono::high_resolution_clock::now();
   
   auto config_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(config_end - config_start).count();
@@ -55,8 +55,8 @@ int main(int argc, char * argv[]) {
 
   float sum = 0.0; 
   for(int t = 0; t < trials; t++) {
-    fft.fft(out_vecs[t], in_vecs[t]);
-    fft.ifft(in_vecs[t], out_vecs[t]); 
+    fft.fft(in_vecs[t], out_vecs[t]);
+    fft.ifft(out_vecs[t], in_vecs[t]); 
     sum += in_vecs[t][t].real();
   }
 

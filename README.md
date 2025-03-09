@@ -1,7 +1,8 @@
 # SoDaSignals Simple signal processing classes
 
  To get to doxygen generated documentation that is more detailed 
- than the following summary, go [here](https://kb1vc.github.io/SoDaSignals/)
+ than the following summary, build the library, install it, and
+ go to {whateveryourinstallationrootis}/share/SoDaUtils/doc/html/index.html
 
  SoDaSignals contains classes that provide:
  . an interface to FFTW for complex DFT and IDFT
@@ -12,7 +13,7 @@
 
 SoDaSignals requires very little in terms of libraries and other
 stuff.
-  . git
+  . git -- optional
   . cmake
   . FFTW3: both double and single precision versions. If your
   distribution distinguishes between "normal" kits and "devel" kits,
@@ -21,7 +22,7 @@ stuff.
   
 and that's it.
 
-For Fedora 34: 
+For Fedora 
 ```
 dnf install gcc-c++ n
 dnf install git cmake
@@ -33,7 +34,7 @@ Optionally, to get nice documentation in html form
 dnf install doxygen
 ```
 
-### For Unbuntu 21
+### For Unbuntu
 
 ```
 apt install g++
@@ -49,8 +50,7 @@ apt install doxygen
 ```
 
 SoDaSignals also requires the SoDaUtils library. It will attempt to
-build the library itself and install it in the same destination
-directory.
+build the library itself if it isn't already installed. 
 
 ## Installing
 
@@ -73,7 +73,6 @@ It will also write doxygen output that starts at /usr/local/share/SoDaSignals/
 ### Installing Without root
 It is possible to install the library in a private directory (without needing root) like this: 
 
-
 ```
 mkdir build
 cd build
@@ -82,39 +81,12 @@ make
 sudo make install
 ```
 
-If you've installed SoDaUtils without root or in some non-standard directory like ${HOME}/my_tools you'll need to add this to the cmake command:
-
-```
-cmake -DCMAKE_INSTALL_PREFIX=${HOME}/my_tools/ -DCMAKE_PREFIX_PATH=${HOME}/my_tools ../ 
-```
 
 This should work just fine, but if you do, then any build that *uses*
 SoDaSignals needs to add this to its cmake
 
 ```
-cmake -DCMAKE_PREFIX_PATH=${HOME}/my_tools ../
-```
- 
-That will tell cmake to look in your directory for the relevant cmake
-files that describe where to find the libraries and headers.
-
-### Installing Without root
-It is possible to install the library in a private directory (without needing root) like this: 
-
-
-```
-mkdir build
-cd build
-cmake -DCMAKE_INSTALL_PREFIX=${HOME}/my_tools/
-make
-sudo make install
-```
-
-This should work just fine, but if you do, then any build that *uses*
-SoDaSignals needs to add this to its cmake
-
-```
-cmake -DCMAKE_PATH_PREFIX=${HOME}/my_tools
+cmake -DCMAKE_PREFIX_PATH=${HOME}/my_tools
 ```
 
 That will tell cmake to look in your directory for the relevant cmake
@@ -122,20 +94,7 @@ files that describe where to find the libraries and headers.
 
 ### MacOS
 
-Mac users should probably use "/opt/local" as the install prefix. This
-will put the library where macports puts other libraries and such.
-
-For reasons I can't fully comprehend, some installations (especially
-for MacOS BigSur) have trouble finding the FFTW package with cmake. As
-ugly as it is, you can fix this problem like this: (in the build
-directory) ``` FFTW3f_DIR=/opt/local/lib/cmake/fftw3 cmake ../ ```
-Replace /opt/local/lib/cmake/fftw3 with the directory containing the
-file "FFTW3Config.cmake"
-
-Additionally, the macports FFTW3 installation is broken.  It is
-missing "FFTW3fLibraryDepends.cmake" If you are stuck, you can copy
-the file in "cmake/macports_fix/FFTW3LibraryDepends.cmake" to the
-directory mentioned above. ("/opt/local....fftw3" or whatever)
+Mac users are on their own now.... 
 
 ### Linux
 
@@ -143,7 +102,7 @@ No trouble reported yet
 
 ### Windows
 
-I have no idea.  
+No port exists. No port is likely. 
 
 
 ## Testing and Using it all
@@ -160,6 +119,18 @@ cmake ../
 make
 ./FilterExample
 ```
+
+If you've installed it locally in a directory like ~/foo , you'll need to do this:
+```
+cd example
+mkdir build
+cd build
+cmake -DCMAKE_PREFIX_PATH=${HOME}/my_tools ../
+make
+./FilterExample
+```
+
+
 Did that work?
 
 If so, congratulations.  And you can use the "CMakeLists.txt" file in
