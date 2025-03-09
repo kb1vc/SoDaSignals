@@ -31,7 +31,6 @@
 #include <vector>
 #include <cstdint>
 #include <fftw3.h>
-#include <SoDa/Format.hxx>
 #include "Filter.hxx"
 
 namespace SoDa {
@@ -137,9 +136,7 @@ namespace SoDa {
     
     class BadBufferSize : public std::runtime_error {
     public:
-      BadBufferSize(const std::string & st, uint32_t got_size, uint32_t should_be_size) :
-	std::runtime_error(SoDa::Format("ReSampler::BadBufferSize:: %0 buffer was length %1 should have been %2\n")
-			   .addS(st).addI(got_size).addI(should_be_size).str()) { }
+      BadBufferSize(const std::string & st, uint32_t got_size, uint32_t should_be_size);
     };
 
     uint32_t getU() { return U; }

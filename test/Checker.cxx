@@ -1,7 +1,9 @@
 #include "Checker.hxx"
 #include <iostream>
 #include <fstream>
+#include <SoDa/Format.hxx>
 #include "../include/NCO.hxx"
+
 /*
   Copyright (c) 2022 Matthew H. Reilly (kb1vc)
   All rights reserved.

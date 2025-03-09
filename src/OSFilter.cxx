@@ -161,4 +161,16 @@ namespace SoDa {
     }
     return in_buf.size();    
   }
+
+  OSFilter::BadBufferSize::BadBufferSize(const std::string & st, 
+					 unsigned int in, 
+					 unsigned int out, 
+					 unsigned int req) :
+	std::runtime_error(SoDa::Format("OSFilter::%3 input and output buffer sizes (%0 and %1) must be equal to %2\n")
+			   .addI(in)
+			   .addI(out)
+			   .addI(req)
+			   .addS(st)
+			   .str()) { }
+  
 }

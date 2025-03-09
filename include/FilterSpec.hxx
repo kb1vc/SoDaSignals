@@ -44,7 +44,7 @@
 #include <list>
 #include <complex>
 #include <stdexcept>
-#include <SoDa/Format.hxx>
+
 
 namespace SoDa {
 
@@ -91,9 +91,7 @@ namespace SoDa {
      */
     class BadRealSpec : public std::runtime_error {
     public:
-      BadRealSpec(const std::string & st, float freq) :
-	std::runtime_error(SoDa::Format("FilterSpec::%1 specification for REAL valued filter contains a negative frequency %0. Not good.\n")
-			 .addF(freq).addS(st).str()) { }
+      BadRealSpec(const std::string & st, float freq);
     };
     
     /**

@@ -33,6 +33,8 @@
 #include <stdlib.h>
 #include <iostream>
 #include <fstream>
+#include <SoDa/Format.hxx>
+
 
 namespace SoDa {
   typedef std::vector<std::complex<float>> CVec;  
@@ -278,4 +280,12 @@ namespace SoDa {
     return out.size();
     
   }
+
+  ReSampler::BadBufferSize::BadBufferSize(const std::string & st, uint32_t got_size, uint32_t should_be_size) :
+	std::runtime_error(SoDa::Format("ReSampler::BadBufferSize:: %0 buffer was length %1 should have been %2\n")
+			   .addS(st)
+			   .addI(got_size)
+			   .addI(should_be_size)
+			   .str()) { }
+  
 }

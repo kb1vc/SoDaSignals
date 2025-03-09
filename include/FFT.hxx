@@ -41,7 +41,6 @@
 #include <vector>
 #include <fftw3.h>
 #include <stdexcept>
-#include <SoDa/Format.hxx>
 
 namespace SoDa {
   /**
@@ -66,9 +65,7 @@ namespace SoDa {
        * @param ins the size of the input vector
        * @param outs the size of the output vector
        */
-      UnmatchedSizes(const std::string & st, unsigned int ins, unsigned int outs) :
-	std::runtime_error(SoDa::Format("Vector arguments to function FFT::%0 must be the same size. In.size = %1  Out.size = %2\n")
-			 .addS(st).addI(ins).addI(outs).str()) { }
+      UnmatchedSizes(const std::string & st, unsigned int ins, unsigned int outs);
     };
     
     /**
@@ -86,9 +83,7 @@ namespace SoDa {
        * @param was the size of the vector passed to FFTW
        * @param should_be the size of the vector expected by this instance of FFT
        */
-      BadSize(const std::string & st, unsigned int was, unsigned int should_be) :
-	std::runtime_error(SoDa::Format("Vector arguments to function FFT::%0 must %2 but were %1 instead\n")
-			 .addS(st).addI(was).addI(should_be).str()) { }
+      BadSize(const std::string & st, unsigned int was, unsigned int should_be); 
     };
 
     ///  Select the level of optimization for fft/ifft operations

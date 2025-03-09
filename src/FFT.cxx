@@ -27,8 +27,11 @@
 */
 
 #include "FFT.hxx"
+#include <SoDa/Format.hxx>
 
 namespace SoDa {
+
+  
   FFT::FFT(unsigned int len, FFTOpt opt) : len(len) {
     fftwf_set_timelimit(1.0);
     
@@ -205,5 +208,13 @@ namespace SoDa {
     return best_val; 
   }
 
+
+  FFT::UnmatchedSizes::UnmatchedSizes(const std::string & st, unsigned int ins, unsigned int outs) :
+    std::runtime_error(SoDa::Format("Vector arguments to function FFT::%0 must be the same size. In.size = %1  Out.size = %2\n")
+		       .addS(st).addI(ins).addI(outs).str()) { }
+    
+  FFT::BadSize::BadSize(const std::string & st, unsigned int was, unsigned int should_be) :
+    std::runtime_error(SoDa::Format("Vector arguments to function FFT::%0 must %2 but were %1 instead\n")
+		       .addS(st).addI(was).addI(should_be).str()) { }
 }
 

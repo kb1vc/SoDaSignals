@@ -1,5 +1,3 @@
-FIND_PACKAGE(SoDaUtils REQUIRED QUIET)
-
 
 add_executable(FFTTest FFTTest.cxx)
 target_link_libraries(FFTTest sodasignals ${SoDaUtils_LIBRARIES})

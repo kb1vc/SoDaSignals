@@ -29,6 +29,7 @@
 #include "Filter.hxx"
 #include <iostream>
 #include <fstream>
+#include <SoDa/Format.hxx>
 
 namespace SoDa {
 
@@ -317,4 +318,16 @@ H = fft(h)
     auto ret = std::pair<float, float>(bottom + f_lo * step, bottom + f_hi * step);
     return ret; 
   }
+
+  Filter::BadBufferSize::BadBufferSize(const std::string & st, 
+				       unsigned int in, 
+				       unsigned int out, 
+				       unsigned int req) :
+	std::runtime_error(SoDa::Format("Filter::%3 input and output buffer sizes (%0 and %1) must be equal to %2\n")
+			   .addI(in)
+			   .addI(out)
+			   .addI(req)
+			   .addS(st)
+			   .str()) { }
+  
 }
