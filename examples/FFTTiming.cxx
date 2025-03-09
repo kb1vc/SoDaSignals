@@ -1,5 +1,4 @@
 #include <SoDa/FFT.hxx>
-#include <SoDa/Format.hxx>
 #include <iostream>
 #include <cmath>
 #include <complex>
@@ -72,12 +71,12 @@ int main(int argc, char * argv[]) {
   std::cout << "# Vector_Size Config_Time Num_Trials Elapsed_Time Time_per_point\n";
   
   // vsize, trials, elapsed, time-per-pt
-  std::cout << SoDa::Format("%0 %4 %1 %2 %3\n")
-    .addI(vsize)
-    .addI(trials)
-    .addF(elapsed * 1e-9, 'e')
-    .addF((elapsed / points) * 1e-9, 'e')
-    .addF(config_ns * 1e-9, 'e');
+  std::cout << vsize
+	    << " " << trials
+	    << " " << (elapsed * 1e-9)
+	    << " " << ((elapsed / points) * 1e-9)
+	    << " " << (config_ns * 1e-9)
+	    << "\n";
   
   
 }

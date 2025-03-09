@@ -2,7 +2,6 @@
 #include <iostream>
 #include <fstream>
 #include <cmath>
-#include <SoDa/Format.hxx>
 
 
 
@@ -47,13 +46,13 @@ int main() {
       int lim = out.size() - 1;
       for(int i = 0; i < out.size(); i++, ko++) {
 	float iv = (i == lim) ? (tr + 1.0) : 0;
-	outf << SoDa::Format("%0 %1 %2 %3 %4 %5\n")
-	  .addI(ko)
-	  .addF(in[i].real())
-	  .addF(in[i].imag())
-	  .addF(out[i].real())
-	  .addF(out[i].imag())
-	  .addF(iv);
+	outf << " " << ko
+	     << " " << in[i].real()
+	     << " " << in[i].imag()
+	     << " " << out[i].real()
+	     << " " << out[i].imag()
+	     << " " << iv
+	     << "\n";
       }
     }
 
