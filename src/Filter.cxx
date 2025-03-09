@@ -68,34 +68,39 @@ H = fft(h)
 		 float sample_rate,
 		 unsigned int num_taps,
 		 unsigned int buffer_size, 
-		 float gain) {
+		 float gain,
+		 WindowChoice window_choice) {    
     
     FilterSpec fspec(sample_rate, low_cutoff, high_cutoff, skirt);
 
     fspec.setTaps(num_taps);
     
-    makeFilter(fspec, buffer_size, gain);
+    makeFilter(fspec, buffer_size, gain, window_choice);
   }
 
   Filter::Filter(FilterSpec & filter_spec, 
 		 unsigned int buffer_size,
-		 float gain) {
-    makeFilter(filter_spec, buffer_size, gain);
+		 float gain,
+		 WindowChoice window_choice) {
+    makeFilter(filter_spec, buffer_size, gain, window_choice);
   }
 
   Filter::Filter(std::vector<std::complex<float>> & Hproto, 
-		 unsigned int fft_size, float gain, 
+		 unsigned int buffer_size, 
+		 float gain, 
 		 WindowChoice window_choice) {
     sample_rate = 1.0; 
-    makeFilter(Hproto, Hproto.size(), fft_size, gain, window_choice);
+    makeFilter(Hproto, buffer_size, gain, window_choice);
   }
   
   void Filter::makeFilter(std::vector<std::complex<float>> Hproto, 
-			  unsigned int num_taps, 
 			  unsigned int _buffer_size, 
 			  float gain, 
 			  WindowChoice window_choice) {
     buffer_size = _buffer_size;
+
+    auto num_taps = Hproto.size();
+    
     std::vector<std::complex<float>> hproto(num_taps);    
 
     // now we've got a frequency domain prototype.
@@ -111,11 +116,23 @@ H = fft(h)
     pfft.ishift(hproto, hproto);
 
     // now apply a window
-    if(window_choice != NOWINDOW) {
-      std::vector<float> window(num_taps);
-      //hammingWindow(window);
-      hannWindow(window);    // gives the best adjacent frequency rejection
-      //blackmanWindow(window);
+    std::vector<float> window(num_taps);    
+    bool apply_window = true; 
+    switch (window_choice) {
+    case HAMMING:
+      hammingWindow(window);
+      break;
+    case HANN:
+      hannWindow(window);
+      break;
+    case BLACKMAN:
+      blackmanWindow(window);
+      break; 
+    default:
+      apply_window = false; 
+    }
+
+    if(apply_window) {
       for(int i = 0; i < num_taps; i++) {
 	hproto[i] = hproto[i] * window[i];
       }
@@ -160,7 +177,8 @@ H = fft(h)
   
   void Filter::makeFilter(FilterSpec & filter_spec, 
 			  unsigned int _buffer_size, 
-			  float gain) {
+			  float gain,
+			  WindowChoice window) {
     sample_rate = filter_spec.getSampleRate();
     buffer_size = _buffer_size;
     auto num_taps = filter_spec.getTaps();    
@@ -170,7 +188,7 @@ H = fft(h)
 
     filter_spec.fillHproto(Hproto);
 
-    makeFilter(Hproto, num_taps, buffer_size, gain);
+    makeFilter(Hproto, buffer_size, gain, window);
   }
 
   void Filter::hammingWindow(std::vector<float> & w) {

@@ -61,7 +61,13 @@ namespace SoDa {
     bool time_out; 
   };
 
-  enum WindowChoice { NOWINDOW, HAMMING };
+  /// select the window to be applied in constructing the filter
+  enum WindowChoice {
+    NOWINDOW, ///< a really bad idea. Included just for experimentation
+    HAMMING, ///< a classic
+    HANN, ///< tight skirts (!)
+    BLACKMAN ///< good compromise
+  };
   
   class Filter {
   public:
@@ -72,28 +78,50 @@ namespace SoDa {
 
 
     
-    /// constructor
-    /// Build the filter from a filter spec for a bandpass filter
-    /// 
-    /// @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
-    /// @param buffer_size the impulse response and frequency image will be this long
-    /// @param gain passband gain (max gain) through filter
+    /**
+     * @brief Build the filter from a filter spec for a general filter
+     *
+     * @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
+     * @param buffer_size the impulse response and frequency image will be this long
+     * @param gain passband gain (max gain) through filter
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN 
+     */
     Filter(FilterSpec & filter_spec, 
 	   unsigned int buffer_size, 
-	   float gain = 1.0); 
+	   float gain = 1.0, 
+	   WindowChoice window = HANN);        
 
-    /// Alternate constructor, for very simple filters
+    /**
+     * @brief Alternate constructor, for very simple filters
+     *
+     * @param low_cutoff lower edge of the filter
+     * @param high_cutoff upper edge of the filter
+     * @param skirt width of transition band between cutoff and stopband
+     * @param sample_rate sample rate for the input stream. 
+     * @param num_taps number of taps in the filter.
+     * @param buffer_size size of the input buffer when apply is called
+     * @param gain relative magnitude of input to output in the passband
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN
+     */
     Filter(float low_cutoff, float high_cutoff, float skirt,
 	   float sample_rate,
 	   unsigned int num_taps,
 	   unsigned int buffer_size, 
-	   float gain = 1.0);
+	   float gain = 1.0, 
+	   WindowChoice window = HANN);    
 
-    /// Alternate constructore where we just get the H proto
+    /**
+     * @brief Alternate constructore where we just get the H proto
+     *
+     * @param H a prototype frequency domain image of the filter
+     * @param buffer_size size of the input buffer when apply is called
+     * @param gain relative magnitude of input to output in the passband
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN
+     */
     Filter(std::vector<std::complex<float>> & H, 
-	   unsigned int fft_size, 
+	   unsigned int buffer_size, 
 	   float gain = 1.0,
-	   WindowChoice window_choice = HAMMING);
+	   WindowChoice window = HANN);
     
     /// run the filter on a complex input stream
     /// @param in_buf the input buffer I/Q samples (complex)
@@ -133,21 +161,32 @@ namespace SoDa {
     unsigned int outLenRequired(unsigned int in_size) { return in_size; }
 
   protected:
-    /// @brief  Build the filter from a filter spec for a bandpass filter -- common method
-    /// for all forms of Filter constructors. 
-    /// 
-    /// @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
-    /// @param buffer_size the impulse response and frequency image will be this long
-    /// @param gain passband gain (max gain) through filter
+    /** @brief  Build the filter from a filter spec for a bandpass filter -- common method
+     * for all forms of Filter constructors. 
+     * 
+     * @param filter_spec object of class FilterSpec identifying corner frequencies and amplitudes
+     * @param buffer_size the impulse response and frequency image will be this long
+     * @param gain passband gain (max gain) through filter
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN  
+     * 
+     */
     void makeFilter(FilterSpec & filter_spec, 
 		    unsigned int buffer_size, 
-		    float gain = 1.0); 
+		    float gain = 1.0,
+		    WindowChoice window = HAMMING); 		    
 
+    /** @brief  Build the filter from a prototype
+     *
+     * @param Hproto frequency domain filter image
+     * @param buffer_size the impulse response and frequency image will be this long
+     * @param gain passband gain (max gain) through filter
+     * @param window filter window choice - we're using the window filter synthesis method. Defaults to HANN  
+     * 
+     */
     void makeFilter(std::vector<std::complex<float>> Hproto, 
-		    unsigned int num_taps, 
 		    unsigned int buffer_size,
 		    float gain = 1.0, 		    
-		    WindowChoice window_choice = HAMMING); 
+		    WindowChoice window = HAMMING); 
 
     
     /// parameters that we keep to support display masks on the spectrogram
