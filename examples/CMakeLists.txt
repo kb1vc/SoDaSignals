@@ -18,16 +18,15 @@ SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math")
 # This is all you need to do if the SoDaFormat stuff
 # was installed correctly. 
 FIND_PACKAGE(SoDaSignals REQUIRED)
-FIND_PACKAGE(SoDaUtils REQUIRED)
 
 ########### next target ###############
 
 
 # Export header files that are required to build loadable modules
 
-set(LIB_DIRS ${SoDaSignals_LIBRARY_DIRS} ${SoDaUtils_LIBRARY_DIRS})
-set(LIBS ${SoDaSignals_LIBRARIES} ${SoDaUtils_LIBRARIES})
-set(INCLUDE_DIRS ${SoDaSignals_INCLUDE_DIRS} ${SoDaUtils_INCLUDE_DIRS})
+set(LIB_DIRS ${SoDaSignals_LIBRARY_DIRS})
+set(LIBS ${SoDaSignals_LIBRARIES})
+set(INCLUDE_DIRS ${SoDaSignals_INCLUDE_DIRS})
 
 add_executable(FFTExample FFTExample.cxx)
 target_link_directories(FFTExample PUBLIC ${LIB_DIRS})
