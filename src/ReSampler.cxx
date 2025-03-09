@@ -37,28 +37,6 @@
 
 
 namespace SoDa {
-  typedef std::vector<std::complex<float>> CVec;  
-  static void dumpCVec(const std::string & fn, CVec a) {
-    std::ofstream of(fn);
-    for(int i = 0; i < a.size(); i++) {
-      of  << SoDa::Format("%0 %1 %2\n")
-	.addI(i)
-	.addF(a.at(i).real(), 'e')
-	.addF(a.at(i).imag(), 'e');
-    }
-    of.close();
-  }
-  
-  static void calcMag(const std::string & st, std::vector<std::complex<float>> & ve) {
-    float max = 0.0;
-    float sumsq = 0.0; 
-    for(auto v : ve) {
-      auto m = std::abs(v);
-      max = std::max(m, max); 
-      sumsq += m * m; 
-    }
-  }
-
   static uint32_t getGCD(uint32_t a, uint32_t b) {
     if(b == 0) return a;
     else if(a < b) {
@@ -247,8 +225,6 @@ namespace SoDa {
       /// oooh... we're stuffed.  apply the LPF
       lpf_p->apply(Y, Y, Filter::InOutMode(false, false));
     }
-
-    // dumpCVec("Y.dat", Y);    
 
     // do the inverse FFT
     out_fft_p->ifft(Y, y);

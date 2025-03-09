@@ -27,10 +27,13 @@
 */
 
 #include "Periodogram.hxx"
+#include "Filter.hxx"
 #include <algorithm>
 
 namespace SoDa {
-  Periodogram::Periodogram(unsigned int segment_length, float _alpha) : 
+  Periodogram::Periodogram(unsigned int segment_length, 
+			   float _alpha,
+			   Filter::WindowChoice window_choice) : 
     segment_length(segment_length) {
 
     setAlpha(_alpha);
@@ -50,30 +53,18 @@ namespace SoDa {
 
     // create the window
     window.resize(segment_length);
-    double ang_inc = M_PI / double(segment_length);
-    float sum_mag = 0.0; 
-
-    for(int i = 0; i < segment_length; i++) {
-      // create a  window -- Use this to
-      // eliminate the artifacts caused by transitions at the buffer ends.
-      double ang = ang_inc * double(i);
-#if 0
-      // blackman
-      auto c2 = cos(2.0 * ang);
-      auto c4 = cos(4.0 * ang); 
-      float mag = 0.42 - 0.5 * c2 + 0.08 * c4;
-#else
-      // hann -- not as tight as blackman, but avoids some odd blips in the spectrum
-      auto s = sin(ang);
-      float mag = s * s; 
-#endif      
-      window[i] = mag;
-      sum_mag += mag;// * mag; 
+    switch (window_choice) {
+    case Filter::HAMMING:
+      Filter::hammingWindow(window);
+      break; 
+    case Filter::BLACKMAN:
+      Filter::blackmanWindow(window);
+      break; 
+    case Filter::HANN:
+    default:
+      Filter::hannWindow(window);
+      break; 
     }
-
-    auto avg_win_mag = sum_mag / double(segment_length);
-    
-    // fft_scale = fft_scale / avg_win_mag; 
     
     clear();
   }

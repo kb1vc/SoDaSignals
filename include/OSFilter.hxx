@@ -123,11 +123,22 @@ namespace SoDa {
 		       std::vector<float> & out_buf);
 
 
+    /**
+     * @brief return the number of taps in the filter.
+     */
     unsigned int getTaps() { return save_buf.size() + 1; }
 
-    
+
+    /**
+     * @brief return the length of the internal buffer (input buffer len + filter size - 1)
+     */
     unsigned int getInternalSize() { return x_augmented.size(); }
 
+    /**
+     * @brief return what the filter object believes are its lowest and highest specified frequencies
+     *
+     * @return pair containing lowest, highest specified frequencies in the filter -- more or less 
+     */
     std::pair<float,float> getFilterEdges() { return filter_p->getFilterEdges(); }
 
   private:

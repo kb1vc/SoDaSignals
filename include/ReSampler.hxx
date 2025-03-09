@@ -106,12 +106,25 @@ namespace SoDa {
 	      float output_sample_rate,
 	      float time_span);
 
+    /**
+     * @brief take the resampler apart.
+     */
     ~ReSampler();
-    
+
+    /**
+     * @brief return the expected input buffer size. 
+     */
     uint32_t getInputBufferSize();
 
+    /**
+     * @brief return the expected output buffer size.
+     */
     uint32_t getOutputBufferSize();
-    
+
+    /**
+     * @brief return the length of the filter (in taps)
+     *
+     */
     uint32_t getFilterLength();
       
     /**
@@ -132,17 +145,19 @@ namespace SoDa {
 		   std::vector<float> & out);
 
 
-    void getLxLy(uint32_t & lx, uint32_t & ly) { lx = Lx; ly = Ly; }
-    
+    /**
+     * @class BadBufferSize
+     *
+     * @brief The filter was built to process a buffer of a size different from the
+     * one that was passed to "apply."
+     */
     class BadBufferSize : public std::runtime_error {
     public:
       BadBufferSize(const std::string & st, uint32_t got_size, uint32_t should_be_size);
     };
 
-    uint32_t getU() { return U; }
-    uint32_t getD() { return D; }
     
-  protected:
+  private:
     std::unique_ptr<SoDa::Filter> lpf_p; /// the anti-aliasing low pass filter. 
     std::unique_ptr<SoDa::FFT> in_fft_p;
     std::unique_ptr<SoDa::FFT> out_fft_p;    

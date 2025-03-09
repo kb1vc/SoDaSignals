@@ -4,7 +4,16 @@
 #include <complex>
 
 namespace SoDa {
-  
+
+  /**
+   * @brief calculate correlation between two vectors
+   *
+   * @param v0 first vector
+   * @param v1 second vector
+   *
+   * @return the complex correlation (can be turned into mag and phase)
+   * sum(v0 * conj(v1))
+   */
   template<typename T>
   std::complex<T> correlate(const std::vector<std::complex<T>> & v0,
 			    const std::vector<std::complex<T>> & v1) {
@@ -21,6 +30,14 @@ namespace SoDa {
     return result;
   }
 
+  /**
+   * @brief calculate correlation between two vectors
+   *
+   * @param v0 first vector
+   * @param v1 second vector
+   *
+   * @return the correlation magnitude
+   */
   template<typename T>
   T correlate(const std::vector<T> & v0,
 	      const std::vector<T> & v1) {

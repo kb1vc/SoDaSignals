@@ -32,37 +32,6 @@
 #include <SoDa/Format.hxx>
 
 namespace SoDa {
-
-  /**
-   * Here's the recipe
-calculate the cutoff indexes in a discrete frequency domain view with M buckets
-Hproto = 000111....0000...0
-Hproto_r = fftshift(Hproto)
-hproto = ifft(HProto_r)
-// center the impulse
-hproto_r = ifftshift(hproto)
-hs = hproto_r * win
-
-// now stuff the big image
-h.resize(buffer_size)
-h[0:hs.size...] = hs
-H = fft(h)
-   */
-  void dumpCFVec(const std::string & fname, std::vector<std::complex<float>> & fv) {
-    std::ofstream of(fname); 
-    for(auto v : fv) {
-      of << SoDa::Format("%0 %1\n").addF(v.real(), 'e').addF(v.imag(), 'e');
-    }
-    of.close();
-  }
-
-  void dumpFVec(const std::string & fname, std::vector<float> & fv) {
-    std::ofstream of(fname); 
-    for(auto v : fv) {
-      of << SoDa::Format("%0 %1\n").addF(v, 'e');
-    }
-    of.close();
-  }
   
   Filter::Filter(float low_cutoff, float high_cutoff, float skirt, 
 		 float sample_rate,
@@ -286,16 +255,6 @@ H = fft(h)
     return in_buf.size();    
   }
   
-  void Filter::dump(std::ostream & os) {
-    for(int i = 0; i < H.size(); i++) {
-      os << SoDa::Format("FILTER %0 %1 %2 %3 %4\n")
-	.addI(i)
-	.addF(H[i].real())
-	.addF(H[i].imag())
-	.addF(h[i].real())
-	.addF(h[i].imag());
-    }
-  }
   
   std::pair<float, float> Filter::getFilterEdges() {
     // scan from the bottom and top to find the first

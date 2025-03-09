@@ -40,7 +40,7 @@
 #include <vector>
 #include <memory>
 #include "FFT.hxx"
-
+#include "Filter.hxx"
 
 namespace SoDa {
   class Periodogram {
@@ -52,10 +52,14 @@ namespace SoDa {
      * fixed segments. Segments are overlapped by 1/2 the segment length; 
      * 
      * @param segment_length The periodogram will be calculated over "windows" of this length
-     * @param alpha if zero, add each segment's contribution to the accumulated result. 
-     * otherwise acc = alpha * acc + (1 - alpha) * contrib
+     * @param alpha if zero, add each segment's contribution to the accumulated result.
+     * otherwise acc = alpha * acc + (1 - alpha) * contrib     
+     * @param window_choice filter window choice - we're using the window filter synthesis method. Defaults to HANN 
+
      */
-    Periodogram(unsigned int segment_length, float alpha = 0.0); 
+    Periodogram(unsigned int segment_length, 
+		float alpha = 0.0,
+		Filter::WindowChoice window_choice = Filter::HANN); 
 
     /**
      * @brief set the accumulation factor
@@ -86,6 +90,9 @@ namespace SoDa {
      */
     float getScaleFactor(); 
 
+    /**
+     * @brief return the length of the buffer chunk that is consumed on each call to accumulate.
+     */
     uint32_t getSize() { return segment_length; }
     /**
      * @brief clear the state of the periodogram -- zero out the accumulator, 
@@ -93,7 +100,7 @@ namespace SoDa {
      */
     void clear(); 
 
-    //  protected:
+  private:
     std::unique_ptr<FFT> fft_p;
     float alpha, beta;     
     uint32_t segment_length; 

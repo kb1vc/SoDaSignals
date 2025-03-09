@@ -166,10 +166,25 @@ namespace SoDa {
 		       std::vector<float> & out_buf, 
 		       InOutMode in_out_mode = InOutMode(true,true));
 
-    /// dump the filter FFT to the output stream
-    /// @param os an output stream. 
-    void dump(std::ostream & os);
+    /**
+     * @brief create a hamming window to make the filter nice.
+     * @param w a vector that will be multiplied by the filter image
+     */
+    static void hammingWindow(std::vector<float> & w);
 
+    /**
+     * @brief create a hann window to make the filter nice.
+     * @param w a vector that will be multiplied by the filter image
+     */
+    static void hannWindow(std::vector<float> & w);
+
+    /**
+     * @brief create a blackman window to make the filter nice.
+     * @param w a vector that will be multiplied by the filter image
+     */
+    static void blackmanWindow(std::vector<float> & w);        
+
+    
     /**
      * @brief Return the lowest and highest corner frequency for this filter. 
      */
@@ -212,23 +227,6 @@ namespace SoDa {
 		    WindowChoice window = HAMMING); 
 
 
-    /**
-     * @brief create a hamming window to make the filter nice.
-     * @param w a vector that will be multiplied by the filter image
-     */
-    void hammingWindow(std::vector<float> & w);
-
-    /**
-     * @brief create a hann window to make the filter nice.
-     * @param w a vector that will be multiplied by the filter image
-     */
-    void hannWindow(std::vector<float> & w);
-
-    /**
-     * @brief create a blackman window to make the filter nice.
-     * @param w a vector that will be multiplied by the filter image
-     */
-    void blackmanWindow(std::vector<float> & w);        
     
     // this is the FFT image of the filter
     std::vector<std::complex<float>> H;  ///< FFT image of the filter
