@@ -12,7 +12,7 @@ INCLUDE(GNUInstallDirs)
 INCLUDE(CTest)
   
 SET(SoDaSignals_VERSION_MAJOR 3)
-SET(SoDaSignals_VERSION_MINOR 0)
+SET(SoDaSignals_VERSION_MINOR 1)
 SET(SoDaSignals_VERSION_PATCH 0)
 SET(SoDaSignals_VERSION "${SoDaSignals_VERSION_MAJOR}.${SoDaSignals_VERSION_MINOR}.${SoDaSignals_VERSION_PATCH}")
 
@@ -84,23 +84,12 @@ FIND_PACKAGE(FFTW3 REQUIRED)
 # Find SoDaUtils and build it if we must. 
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/BuildSoDaUtils.cmake)
 
-
-get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
-foreach (_variableName ${_variableNames})
-  message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
-
   
-message("SoDaUtils_LIBRARIES = [${SoDaUtils_LIBRARIES}]")  
 set(DEP_LIBS ${FFTW3_LIBRARIES})
 list(APPEND DEP_LIBS ${SoDaUtils_LIBRARIES})
 
 set(DEP_INCLS ${FFTW3_INCLUDE_DIRS})
 list(APPEND DEP_INCLS ${SoDaUtils_INCLUDE_DIR})
-
-message("DEP_INCLS [${DEP_INCLS}]")
-message("DEP_LIBS [${DEP_LIBS}]")
 
 set(SWIG_ENABLED 0)
 
