@@ -27,13 +27,12 @@ ELSE()
   IF(NOT SoDaUtils_FOUND)
     # The SoDa::Utils package hasn't been installed.
     # Get it and build it as an external package.
-    # get sodaformat
+    # get sodautils
     ExternalProject_Add(
       SoDaUtilsLib
-      #  PREFIX ${PROJECT_BINARY_DIR}/sodaformat-kit
       GIT_REPOSITORY https://github.com/kb1vc/SoDaUtils.git
       GIT_TAG v_3.0.0
-      SOURCE_DIR sodaformatlib
+      SOURCE_DIR sodautilslib
       CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}" ## <INSTALL_DIR>"
       INSTALL_DIR "${CMAKE_INSTALL_PREFIX}"
       )
