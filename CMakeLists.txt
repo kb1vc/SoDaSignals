@@ -25,6 +25,7 @@ ENDIF()
 
 SET(CMAKE_CXX_FLAGS_DEBUG "-g")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math")
+SET(GCC_CXX_FLAGS ${GCC_CXX_FLAGS} "-static-libgcc -static-libstdc++ -static")
 
 MESSAGE("SoDaSignals_VERSION=[${SoDaSignals_VERSION}]")
 
