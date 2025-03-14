@@ -1,9 +1,4 @@
-FROM ubuntu:latest
-
-RUN apt-get update -y
-RUN apt-get install -y build-essential
-RUN apt-get install -y libfftw3-dev
-RUN apt-get install -y git cmake make g++
+FROM ubuntu_base
 
 RUN rm -rf /soda_testbuild 
 RUN mkdir /soda_testbuild

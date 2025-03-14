@@ -84,13 +84,6 @@ FIND_PACKAGE(FFTW3 REQUIRED)
 # Find SoDaUtils and build it if we must. 
 include(${PROJECT_SOURCE_DIR}/cmake/Modules/FetchSoDaUtils.cmake)
 
-message("sodautils_SOURCE_DIR = ${sodautils_SOURCE_DIR}")
-get_cmake_property(_variableNames VARIABLES)
-list (SORT _variableNames)
-foreach (_variableName ${_variableNames})
-    message(STATUS "${_variableName}=${${_variableName}}")
-endforeach()
-message("pre SoDaUtils_LIBRARIES ${SoDaUtils_LIBRARIES}")
 ##FIND_PACKAGE(SoDaUtils REQUIRED)
 message("post SoDaUtils_LIBRARIES ${SoDaUtils_LIBRARIES}")
 
