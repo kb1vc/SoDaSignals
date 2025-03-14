@@ -16,25 +16,24 @@ include(GNUInstallDirs)
 include(ExternalProject)
 
 IF(CMAKE_HOST_SYSTEM_NAME MATCHES "Darwin")
-  # If the package isn't installed, we quit.
-
+  # If the package isn't installed, we quit. 
   FIND_PACKAGE(SoDaUtils REQUIRED)
 ELSE()
   # If we find the package, yippeeee!
-  message("\n\n\nTurn this back on\n\n\n")  
+  message("\n\n\nUndo this\n\n\n")
   #FIND_PACKAGE(SoDaUtils QUIET)
   message("SoDaUtils_FOUND = ${SoDaUtils_FOUND}")
   IF(NOT SoDaUtils_FOUND)
     # The SoDa::Utils package hasn't been installed.
     # Get it and build it as an external package.
-    # get sodautils
+    # get sodaformat
     ExternalProject_Add(
       SoDaUtilsLib
+      #  PREFIX ${PROJECT_BINARY_DIR}/sodaformat-kit
       GIT_REPOSITORY https://github.com/kb1vc/SoDaUtils.git
       GIT_TAG v_3.0.0
-      SOURCE_DIR sodautilslib
-      CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}" ## <INSTALL_DIR>"
-      INSTALL_DIR "${CMAKE_INSTALL_PREFIX}"
+      SOURCE_DIR sodaformatlib
+      CMAKE_ARGS "-DCMAKE_INSTALL_PREFIX=<INSTALL_DIR>"
       )
 
     ExternalProject_Get_Property(SoDaUtilsLib INSTALL_DIR)

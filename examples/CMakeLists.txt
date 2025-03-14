@@ -13,9 +13,9 @@ IF(NOT CMAKE_BUILD_TYPE)
 ENDIF()
 
 SET(CMAKE_CXX_FLAGS_DEBUG "-g")
-SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math") 
+SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math")
 
-# This is all you need to do if the stuff
+# This is all you need to do if the SoDaFormat stuff
 # was installed correctly. 
 FIND_PACKAGE(SoDaSignals REQUIRED)
 FIND_PACKAGE(SoDaUtils REQUIRED)

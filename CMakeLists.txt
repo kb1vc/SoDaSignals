@@ -25,7 +25,6 @@ ENDIF()
 
 SET(CMAKE_CXX_FLAGS_DEBUG "-g")
 SET(CMAKE_CXX_FLAGS_RELEASE "-O3 -ffast-math")
-SET(GCC_CXX_FLAGS ${GCC_CXX_FLAGS} "-static-libgcc -static-libstdc++ -static")
 
 MESSAGE("SoDaSignals_VERSION=[${SoDaSignals_VERSION}]")
 
@@ -83,9 +82,18 @@ INCLUDE_DIRECTORIES(${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/include)
 FIND_PACKAGE(FFTW3 REQUIRED)
 
 # Find SoDaUtils and build it if we must. 
-include(${PROJECT_SOURCE_DIR}/cmake/Modules/BuildSoDaUtils.cmake)
+include(${PROJECT_SOURCE_DIR}/cmake/Modules/FetchSoDaUtils.cmake)
 
-  
+message("sodautils_SOURCE_DIR = ${sodautils_SOURCE_DIR}")
+get_cmake_property(_variableNames VARIABLES)
+list (SORT _variableNames)
+foreach (_variableName ${_variableNames})
+    message(STATUS "${_variableName}=${${_variableName}}")
+endforeach()
+message("pre SoDaUtils_LIBRARIES ${SoDaUtils_LIBRARIES}")
+##FIND_PACKAGE(SoDaUtils REQUIRED)
+message("post SoDaUtils_LIBRARIES ${SoDaUtils_LIBRARIES}")
+
 set(DEP_LIBS ${FFTW3_LIBRARIES})
 list(APPEND DEP_LIBS ${SoDaUtils_LIBRARIES})
 

@@ -5,6 +5,7 @@ RUN apt-get install -y build-essential
 RUN apt-get install -y libfftw3-dev
 RUN apt-get install -y git cmake make g++
 
+RUN rm -rf /soda_testbuild 
 RUN mkdir /soda_testbuild
 WORKDIR /soda_testbuild
 RUN git clone https://github.com/kb1vc/SoDaSignals.git

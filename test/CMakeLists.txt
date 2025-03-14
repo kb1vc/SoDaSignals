@@ -1,11 +1,11 @@
 
 add_executable(FFTTest FFTTest.cxx)
-target_link_libraries(FFTTest sodasignals ${SoDaUtils_LIBRARIES})
+target_link_libraries(FFTTest  sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(FFTTest PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(FFTTest PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 
 add_executable(FFTTiming FFTTiming.cxx)
-target_link_libraries(FFTTiming sodasignals ${SoDaUtils_LIBRARIES})
+target_link_libraries(FFTTiming  sodasignals ${SoDaUtils_LIBRARIES})
 target_link_directories(FFTTiming PUBLIC ${SoDaUtils_LIBRARY_DIRS})
 target_include_directories(FFTTiming PUBLIC ${PROJECT_SOURCE_DIR}/include ${SoDaUtils_INCLUDE_DIRS})
 
